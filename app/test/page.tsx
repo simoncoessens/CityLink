@@ -43,7 +43,7 @@ const ParisToBordeauxMap = () => {
       }).addTo(map);
 
       // Explicitly remove textual route information
-      routingControl.on("routesfound", function (e) {
+      routingControl.on("routesfound", function () {
         const container = routingControl.getContainer();
         if (container && container.parentNode) {
           container.parentNode.removeChild(container);
