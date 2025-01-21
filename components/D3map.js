@@ -7,7 +7,7 @@ import PriorityQueue from "ts-priority-queue";
 // Time parsing function
 const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-const D3Map = ({ maxHours = 4, startHour = 8 }) => {
+const D3Map = ({ maxHours = 4, startHour = 8 , onH3CellSelect}) => {
   const containerRef = useRef(null);
   const MAP_WIDTH = 900;
   const MAP_HEIGHT = 800;
@@ -89,6 +89,9 @@ const D3Map = ({ maxHours = 4, startHour = 8 }) => {
         })
         .on("click", function (e, d) {
           setUserSelectedCell(d.h3_cell);
+          if (onH3CellSelect) {
+            onH3CellSelect(d.h3_cell); // Invoke callback with selected cell to the main viz page
+          }
           updateMap(svg, d.h3_cell);
         });
 

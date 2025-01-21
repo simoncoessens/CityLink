@@ -10,7 +10,7 @@ from tqdm import tqdm
 # =======================================
 # Set your OpenAI API key
 client = OpenAI(
-    api_key="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"  # Replace with your actual key
+    api_key="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"  # Replace with your actual key
 )
 
 # Pixabay API key
@@ -78,7 +78,7 @@ def fetch_city_description(city, country):
     """
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a travel guide."},
                 {"role": "user", "content": f"Write a short tourist guide for {city}, {country} with 2-3 hyperlinks to related websites."}
