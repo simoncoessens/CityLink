@@ -25,6 +25,7 @@
     "electron": "^33.2.0",
     "follow-redirects": "^1.15.9",
     "framer-motion": "^11.18.1",
+    "h3-js": "^4.1.0",
     "langchain": "^0.3.5",
     "leaflet": "^1.9.4",
     "leaflet-routing-machine": "^3.2.12",

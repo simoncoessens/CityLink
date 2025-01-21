@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-
+import L from "leaflet";
+import "leaflet-routing-machine";
+import "leaflet/dist/leaflet.css";
 interface RouteMapProps {
   startLocation: { lat: number; lng: number };
   destinationLocation: { lat: number; lng: number };
@@ -11,18 +13,17 @@ const RouteMap: React.FC<RouteMapProps> = ({
   startLocation,
   destinationLocation,
 }) => {
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<InstanceType<typeof L.Map> | null>(null);
+
   const routingControlRef = useRef<L.Routing.Control | null>(null);
 
   useEffect(() => {
-    // Ensure the map logic only runs in the client-side
+    // Ensure the map logic only runs on the client-side
     if (typeof window === "undefined") return;
 
-    // Dynamically import Leaflet and its plugins
     (async () => {
       const L = (await import("leaflet")).default;
       await import("leaflet-routing-machine");
-      await import("leaflet/dist/leaflet.css");
 
       // Initialize the map if it doesn't exist
       if (!mapRef.current) {
@@ -46,30 +47,43 @@ const RouteMap: React.FC<RouteMapProps> = ({
         mapRef.current.removeControl(routingControlRef.current);
       }
 
-      // Add routing control with updated waypoints
+      // Create new routing control
       routingControlRef.current = L.Routing.control({
         waypoints: [
-          L.latLng(startLocation.lat, startLocation.lng), // Start location
-          L.latLng(destinationLocation.lat, destinationLocation.lng), // Destination
+          L.latLng(startLocation.lat, startLocation.lng),
+          L.latLng(destinationLocation.lat, destinationLocation.lng),
         ],
-        createMarker: () => null, // No markers
+        createMarker: () => null, // Hide markers
         routeWhileDragging: false,
-        show: false, // No textual route info
+        show: false, // Hide textual instructions
         addWaypoints: false,
         lineOptions: {
-          styles: [{ color: "#3388ff", weight: 4 }], // Route line style
+          styles: [{ color: "#3388ff", weight: 4 }],
         },
       }).addTo(mapRef.current);
 
-      // Clean up unwanted UI elements
-      routingControlRef.current.on("routesfound", function () {
+      // When routes are found, remove the built-in UI & fit the map
+      routingControlRef.current?.on("routesfound", (e) => {
+        // Remove the default routing container
         const container = routingControlRef.current?.getContainer();
         if (container && container.parentNode) {
           container.parentNode.removeChild(container);
         }
+
+        // Optionally, fit the map to the route
+        if (!mapRef.current) return;
+        const routes = e.routes;
+        if (routes && routes.length > 0) {
+          const route = routes[0];
+          // route.coordinates is an array of LatLng points along the route
+          const bounds = L.latLngBounds(route.coordinates);
+          mapRef.current.fitBounds(bounds, {
+            padding: [50, 50], // Provide some optional padding
+          });
+        }
       });
     })();
-  }, [startLocation, destinationLocation]); // Watch for changes in locations
+  }, [startLocation, destinationLocation]);
 
   return (
     <div

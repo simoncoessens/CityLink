@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import React, { useState, useEffect, useRef } from "react";
 import Papa from "papaparse";
+import { cellToLatLng } from "h3-js"; // <-- ADD THIS
 import {
   IconClipboardCopy,
   IconFileBroken,
@@ -33,7 +34,7 @@ export default function BentoGridDemo() {
   const [filteredSuggestions, setFilteredSuggestions] = useState<CsvRow[]>([]); // To hold filtered suggestions
 
   // The selected H3 cell from the D3 Map
-  const [selectedH3Cell, setSelectedH3Cell] = useState(null);
+  const [selectedH3Cell, setSelectedH3Cell] = useState<string | null>(null);
 
   // For routing map (Paris -> Bordeaux in this example)
   const [startLocation, setStartLocation] = useState({
@@ -63,7 +64,22 @@ export default function BentoGridDemo() {
   const [cityData, setCityData] = useState<CsvRow | null>(null);
 
   useEffect(() => {
-    // Update startLocation based on startingH3Cell
+    // Load CSV data once
+    Papa.parse("/enriched_cities_dev.csv", {
+      download: true,
+      header: true,
+      complete: (results) => {
+        setCsvData(results.data as CsvRow[]);
+      },
+      error: (err) => {
+        console.error("Error parsing CSV:", err);
+      },
+    });
+  }, []);
+
+  // Update the start/destination coordinates if we have matching H3s in CSV
+  useEffect(() => {
+    // If user typed in a starting city that corresponds to an H3 cell:
     if (startingH3Cell && csvData.length > 0) {
       const startRow = csvData.find((row) => row.h3_cell === startingH3Cell);
       if (startRow) {
@@ -74,7 +90,7 @@ export default function BentoGridDemo() {
       }
     }
 
-    // Update destinationLocation based on selectedH3Cell
+    // If user clicked a destination cell
     if (selectedH3Cell && csvData.length > 0) {
       const destinationRow = csvData.find(
         (row) => row.h3_cell === selectedH3Cell
@@ -88,48 +104,63 @@ export default function BentoGridDemo() {
     }
   }, [startingH3Cell, selectedH3Cell, csvData]);
 
-  // Parse the CSV on first render
-  useEffect(() => {
-    Papa.parse("/enriched_cities_dev.csv", {
-      download: true,
-      header: true, // treats first row as a header
-      complete: (results) => {
-        setCsvData(results.data as CsvRow[]);
-      },
-      error: (err) => {
-        console.error("Error parsing CSV:", err);
-      },
-    });
-  }, []);
-
-  // When selectedH3Cell changes, or when csvData is loaded, find the matching row
+  // When selectedH3Cell changes (user clicks on map):
+  //  1) Try direct match in CSV
+  //  2) If no match, find the closest row in CSV by lat/lon using h3ToGeo + distance calc
   useEffect(() => {
     if (selectedH3Cell && csvData.length > 0) {
-      console.log("match with csv");
-      const row = csvData.find((item) => item.h3_cell === selectedH3Cell);
+      let row = csvData.find((item) => item.h3_cell === selectedH3Cell);
+
+      if (!row) {
+        // If we didn't find a direct match, find the closest row by lat/lon
+        const [cellLat, cellLng] = cellToLatLng(selectedH3Cell);
+
+        // For “closest” matching, use Haversine or a simpler formula
+        function toRad(value: number) {
+          return (value * Math.PI) / 180;
+        }
+        function euclideanDistance(
+          lat1: number,
+          lon1: number,
+          lat2: number,
+          lon2: number
+        ): number {
+          return Math.sqrt(Math.pow(lat2 - lat1, 2) + Math.pow(lon2 - lon1, 2));
+        }
+
+        let minDist = Infinity;
+        let closestRow: CsvRow | null = null;
+
+        for (const r of csvData) {
+          const lat = parseFloat(r.lat);
+          const lng = parseFloat(r.lng);
+          const dist = euclideanDistance(cellLat, cellLng, lat, lng);
+          if (dist < minDist) {
+            minDist = dist;
+            closestRow = r;
+            console.log("Closest row:", dist);
+          }
+        }
+        row = closestRow || undefined;
+      }
+
       setCityData(row || null);
     } else {
-      // If no cell selected or no CSV loaded yet
       setCityData(null);
     }
   }, [selectedH3Cell, csvData]);
 
   // Handler that D3Map calls when user clicks on an H3 cell
-  const handleH3CellSelect = (h3Cell: React.SetStateAction<null>) => {
+  const handleH3CellSelect = (h3Cell: string) => {
     setSelectedH3Cell(h3Cell);
     console.log("Selected H3 Cell:", h3Cell);
   };
 
-  // Dropdown suggestion click handler
-  interface Suggestion {
-    city: string;
-    h3_cell: string;
-  }
-
+  // Suggestion select (from input box suggestions)
   const handleSuggestionSelect = (suggestion: CsvRow) => {
     if (suggestion.city) {
-      setStartingLocation(suggestion.city); // Update the city name
-      setStartingH3Cell(suggestion.h3_cell); // Update starting H3 cell
+      setStartingLocation(suggestion.city); // Update the city name in text
+      setStartingH3Cell(suggestion.h3_cell); // Update the starting H3 cell
       setFilteredSuggestions([]); // Clear suggestions
     }
   };
@@ -137,6 +168,8 @@ export default function BentoGridDemo() {
   // -----------------------------
   // 3) ROUTE MAP COMPONENT
   // -----------------------------
+  // (No change needed here; uses startLocation/destinationLocation)
+  // ...
 
   // -----------------------------
   // 4) INPUT TABS
@@ -153,7 +186,6 @@ export default function BentoGridDemo() {
     { title: "CO2", state: 50, setState: () => {}, min: 0, max: 500 },
   ];
 
-  // The User Input Panel
   const userInputPanel = (
     <div>
       <div className="mb-4 flex space-x-2">
@@ -213,12 +245,12 @@ export default function BentoGridDemo() {
             const input = e.target.value;
             setStartingLocation(input);
 
-            // Filter valid rows where `city` exists and matches the input
+            // Filter valid rows where `city` is a string that includes the input
             const matches = csvData.filter(
               (row) =>
-                row.city && // Ensure `city` exists
-                typeof row.city === "string" && // Ensure `city` is a string
-                row.city.toLowerCase().includes(input.toLowerCase()) // Check for matches
+                row.city &&
+                typeof row.city === "string" &&
+                row.city.toLowerCase().includes(input.toLowerCase())
             );
 
             setFilteredSuggestions(matches);
@@ -250,13 +282,7 @@ export default function BentoGridDemo() {
   // -----------------------------
   // 5) DYNAMIC DESTINATION TAB
   // -----------------------------
-  //
-  // We pull data from cityData (which is updated from the CSV).
-  // We'll replicate the structure you had for the "Paris" example,
-  // but show images and text from cityData where possible.
-
   const DynamicDestinationContent = () => {
-    // If no cityData, show a simple placeholder
     if (!cityData) {
       return (
         <div className="p-4 text-center text-sm text-neutral-500">
@@ -265,7 +291,6 @@ export default function BentoGridDemo() {
       );
     }
 
-    // Prepare images (we check if they exist in CSV)
     const images = [];
     if (cityData.image_1) images.push(cityData.image_1);
     if (cityData.image_2) images.push(cityData.image_2);
@@ -273,7 +298,7 @@ export default function BentoGridDemo() {
 
     return (
       <div className="flex flex-col items-center justify-center space-y-6">
-        {/* Carousel of up to 3 images */}
+        {/* Carousel */}
         <div className="relative w-full max-w-lg">
           <Carousel>
             <CarouselContent className="basis-1/3">
@@ -306,13 +331,12 @@ export default function BentoGridDemo() {
 
         {/* Information */}
         <div className="overflow-y-auto max-h-72 px-4 text-center">
-          {/* City Title */}
           <div className="text-sm text-neutral-600 dark:text-neutral-400 mt-2 whitespace-pre-line">
             <ReactMarkdown
               components={{
                 a: ({ href, children }) => (
                   <a
-                    href={href}
+                    href={href!}
                     className="text-blue-600 underline hover:text-blue-800"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -322,7 +346,7 @@ export default function BentoGridDemo() {
                 ),
               }}
             >
-              {cityData.description}
+              {cityData.description || ""}
             </ReactMarkdown>
           </div>
         </div>
@@ -351,14 +375,12 @@ export default function BentoGridDemo() {
       title: "Info",
       content: (
         <div className="p-4 text-center">
-          {/* You can customize a third tab here if desired */}
           Additional city info or random tab.
         </div>
       ),
     },
   ];
 
-  // The Info Cards Panel
   const infoCardsPanel = (
     <div>
       <div className="mb-4 flex space-x-2">
