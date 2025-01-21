@@ -107,7 +107,7 @@ const D3Map = ({ maxHours = 4, startHour = 9 }) => {
         .style("cursor", "pointer")
         .on("mouseover", function (e,d) {
           // d3.select(this).attr("fill", "rgba(0, 123, 255, 0.5)");
-          console.log(routes[d.h3_cell]);
+          console.log(getExtraInformation(routes[d.h3_cell]));
         })
         .on("mouseout", function () {
           // d3.select(this).attr("fill", "rgba(255,255,255, 0.3)");
@@ -304,11 +304,33 @@ const D3Map = ({ maxHours = 4, startHour = 9 }) => {
     const y1 = h3LtLn[h3Cell1][0].y;
     const x2 = h3LtLn[h3Cell2][0].x;
     const y2 = h3LtLn[h3Cell2][0].y;
-    return Math.sqrt((x1-x2)**2 + (y1-y2)**2)/1000;
+    return (Math.sqrt((x1-x2)**2 + (y1-y2)**2)/1000)*1.2;
   }
 
   function getDateDiffInMinutes(startDate, endDate) {
     return (endDate - startDate) / 1000 / 60;
+  }
+
+  /**
+   * Calculates the linear combination of transport modes based on given distances and values.
+   *
+   * @param {Object} detailDistance - An object containing distances for different transport modes.
+   * @param {number} detailDistance.TRAIN - The distance traveled by train.
+   * @param {number} detailDistance.BUS - The distance traveled by bus.
+   * @param {number} detailDistance.REGIONAL - The distance traveled by regional transport.
+   * @param {number[]} values - An array of coefficients for each transport mode in the order: [train, bus, regional].
+   * @returns {number} The calculated linear combination of the transport modes.
+   */
+  function linearCombinationTransportModes(detailDistance, values){
+    return detailDistance.TRAIN * values[0] + detailDistance.BUS * values[1] + detailDistance.REGIONAL * values[2];
+  }
+
+  function getExtraInformation(detailDistance){
+    return {
+        distanceKm: {...detailDistance},
+        co2EmissionsKg: linearCombinationTransportModes(detailDistance, [0.011,0.042, 0.030]),
+        moneyEuros: linearCombinationTransportModes(detailDistance, [0.120,0.040, 0.093])
+    }
   }
 
   return <div ref={containerRef} className="w-full h-auto" />;
