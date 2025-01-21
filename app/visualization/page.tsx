@@ -9,7 +9,7 @@ import {
   IconSignature,
 } from "@tabler/icons-react";
 import { BentoGridItem } from "@/components/ui/bento-grid";
-const D3Map = dynamic(() => import("@/components/D3map"), { ssr: false });
+const D3Map = dynamic(() => import("@/components/D3map"), { ssr: true });
 import { TransitionPanel } from "@/components/core/transition-panel";
 import {
   Carousel,
