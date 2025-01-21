@@ -25,7 +25,7 @@ export default function BentoGridDemo() {
   // 1) STATE FOR TIMES, HOURS, ETC.
   // -----------------------------
   const [maxHours, setMaxHours] = useState(4);
-  const [startHour, setStartHour] = useState(8);
+  const [startHour, setStartHour] = useState(9);
   const [activeInputTab, setActiveInputTab] = useState(0);
   const [activeInfoTab, setActiveInfoTab] = useState(0);
   const [startingLocation, setStartingLocation] = useState("");
@@ -142,13 +142,13 @@ export default function BentoGridDemo() {
   // 4) INPUT TABS
   // -----------------------------
   const INPUT_TABS = [
-    { title: "Time", state: maxHours, setState: setMaxHours, min: 1, max: 24 },
+    { title: "Time", state: maxHours, setState: setMaxHours, min: 1, max: 9 },
     {
       title: "Money",
       state: startHour,
       setState: setStartHour,
       min: 0,
-      max: 1000,
+      max: 24,
     },
     { title: "CO2", state: 50, setState: () => {}, min: 0, max: 500 },
   ];
