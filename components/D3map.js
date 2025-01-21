@@ -10,7 +10,7 @@ import PropTypes from "prop-types";
 const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
 
-const D3Map = ({ maxHours = 4, startHour = 8 }) => {
+const D3Map = ({ maxHours = 4, startHour = 9 }) => {
   const containerRef = useRef(null);
   const MAP_WIDTH = 900;
   const MAP_HEIGHT = 800;
