@@ -31,8 +31,8 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
     REGIONAL: true,
   };
   const limits = {
-    money: 80,
-    co2: 10,
+    money: 8000,
+    co2: 1000,
   };
 
   // ---------------------- 1. INITIALIZE MAP ONCE ON MOUNT ----------------------
@@ -166,6 +166,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
       h3_cell: row.h3_cell,
       departure_date: parseDate(row.departure_date),
       trip_id: row.trip_id,
+      transport_mode: row.transport_mode,
     }));
 
     // Build the dictionaries for BFS
