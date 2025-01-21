@@ -1,78 +1,16 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as d3 from "d3";
 import PriorityQueue from "ts-priority-queue";
+import PropTypes from "prop-types";
+
 
 // Time parsing function
 const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
 
 const D3Map = ({ maxHours = 4, startHour = 8 }) => {
-  function getFrenchCities() {
-    return d3.csv("data/FrenchCities_with_h3.csv").then(data => {
-        return data.reduce((acc, row) => {
-            if (!acc[row.h3_cell]) {
-                acc[row.h3_cell] = [];
-            }
-            acc[row.h3_cell].push({
-                city: row.city_ascii,
-                population: row.population,
-            });
-            return acc;
-        }, {});
-    });
-  }
-  
-  //h3,x,y
-  function getH3LtLn() {
-    return d3.csv("data/h3_info.csv").then(data => {
-        return data.reduce((acc, row) => {
-            if (!acc[row.h3]) {
-                acc[row.h3] = [];
-            }
-            acc[row.h3].push({
-                x: parseFloat(row.x),
-                y: parseFloat(row.y),
-            });
-            return acc;
-        }, {});
-    });
-  }
-
-  function parseCSVData(csvPath) {
-    return d3.csv(csvPath).then(csvData => {
-        return csvData.map(row => ({
-            route_id: row.route_id,
-            route_long_name: row.route_long_name,
-            company: row.company,
-            transport_mode: row.transport_mode,
-            stop_sequence: row.stop_sequence,
-            arrival_time: parseDate(row.arrival_time),
-            departure_time: parseDate(row.departure_time),
-            stop_name: row.stop_name,
-            stop_lon: parseFloat(row.stop_lon),
-            stop_lat: parseFloat(row.stop_lat),
-            arrival_date: parseDate(row.arrival_date),
-            departure_date: parseDate(row.departure_date),
-            trip_id: row.trip_id,
-            h3_cell: row.h3_cell
-        }));
-    });
-  }
-  function getDistanceKmH3Cells(h3Cell1, h3Cell2){
-    const x1 = h3LtLn[h3Cell1][0].x;
-    const y1 = h3LtLn[h3Cell1][0].y;
-    const x2 = h3LtLn[h3Cell2][0].x;
-    const y2 = h3LtLn[h3Cell2][0].y;
-    return Math.sqrt((x1-x2)**2 + (y1-y2)**2)/1000;
-  }
-
-  function getDateDiffInMinutes(startDate, endDate) {
-    return (endDate - startDate) / 1000 / 60;
-  }
-
-
   const containerRef = useRef(null);
   const MAP_WIDTH = 900;
   const MAP_HEIGHT = 800;
@@ -81,6 +19,9 @@ const D3Map = ({ maxHours = 4, startHour = 8 }) => {
   let [h3CellDictionary, setH3CellDictionary] = useState({});
   let [userSelectedCell, setUserSelectedCell] = useState(null);
   let [maxDistance, setMaxDistance] = useState(maxHours * 60); // Convert hours to minutes
+  useEffect(() => {
+    setMaxDistance(maxHours * 60);
+  }, [maxHours]);
   let frenchCitiesByH3 = {};
   let routes = {}
   let h3LtLn = {}
@@ -165,12 +106,13 @@ const D3Map = ({ maxHours = 4, startHour = 8 }) => {
         .attr("stroke-width", 1)
         .style("cursor", "pointer")
         .on("mouseover", function () {
-          d3.select(this).attr("fill", "rgba(0, 123, 255, 0.5)");
+          // d3.select(this).attr("fill", "rgba(0, 123, 255, 0.5)");
         })
         .on("mouseout", function () {
-          d3.select(this).attr("fill", "rgba(255,255,255, 0.3)");
+          // d3.select(this).attr("fill", "rgba(255,255,255, 0.3)");
         })
         .on("click", function (e, d) {
+          console.log(d.h3_cell, maxHours, maxDistance);
           setUserSelectedCell(d.h3_cell);
           updateMap(svg, d.h3_cell);
         });
@@ -301,6 +243,68 @@ const D3Map = ({ maxHours = 4, startHour = 8 }) => {
       });
       return acc;
     }, {});
+  }
+  function getFrenchCities() {
+    return d3.csv("FrenchCities_with_h3.csv").then(data => {
+        return data.reduce((acc, row) => {
+            if (!acc[row.h3_cell]) {
+                acc[row.h3_cell] = [];
+            }
+            acc[row.h3_cell].push({
+                city: row.city_ascii,
+                population: row.population,
+            });
+            return acc;
+        }, {});
+    });
+  }
+  
+  //h3,x,y
+  function getH3LtLn() {
+    return d3.csv("data/h3_info.csv").then(data => {
+        return data.reduce((acc, row) => {
+            if (!acc[row.h3]) {
+                acc[row.h3] = [];
+            }
+            acc[row.h3].push({
+                x: parseFloat(row.x),
+                y: parseFloat(row.y),
+            });
+            return acc;
+        }, {});
+    });
+  }
+
+  function parseCSVData(csvPath) {
+    return d3.csv(csvPath).then(csvData => {
+        return csvData.map(row => ({
+            route_id: row.route_id,
+            route_long_name: row.route_long_name,
+            company: row.company,
+            transport_mode: row.transport_mode,
+            stop_sequence: row.stop_sequence,
+            arrival_time: parseDate(row.arrival_time),
+            departure_time: parseDate(row.departure_time),
+            stop_name: row.stop_name,
+            stop_lon: parseFloat(row.stop_lon),
+            stop_lat: parseFloat(row.stop_lat),
+            arrival_date: parseDate(row.arrival_date),
+            departure_date: parseDate(row.departure_date),
+            trip_id: row.trip_id,
+            h3_cell: row.h3_cell
+        }));
+    });
+  }
+  function getDistanceKmH3Cells(h3Cell1, h3Cell2){
+    const x1 = h3LtLn[h3Cell1][0].x;
+    const y1 = h3LtLn[h3Cell1][0].y;
+    const x2 = h3LtLn[h3Cell2][0].x;
+    const y2 = h3LtLn[h3Cell2][0].y;
+    return Math.sqrt((x1-x2)**2 + (y1-y2)**2)/1000;
+  }
+
+  function getDateDiffInMinutes(startDate, endDate) {
+    return (endDate - startDate) / 1000 / 60;
   }
 
   return <div ref={containerRef} className="w-full h-auto" />;
