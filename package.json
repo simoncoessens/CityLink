@@ -30,12 +30,13 @@
     "leaflet-routing-machine": "^3.2.12",
     "lucide-react": "^0.460.0",
     "next": "15.0.3",
+    "papaparse": "^5.5.1",
     "pinecone-client": "^2.0.0",
     "pspdfkit": "^2024.7.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-feather": "^2.0.10",
-    "react-markdown": "^9.0.1",
+    "react-markdown": "^9.0.3",
     "react-pdf": "^9.1.1",
     "supports-color": "^9.4.0",
     "tailwind-merge": "^2.6.0",
@@ -44,6 +45,8 @@
     "typescript": "5.6.3"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.16",
+    "@types/papaparse": "^5.3.15",
     "autoprefixer": "^10.4.20",
     "encoding": "^0.1.13",
     "postcss": "^8.4.49",

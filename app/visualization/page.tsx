@@ -1,14 +1,14 @@
 "use client";
-
-import React, { useState } from "react";
+import dynamic from "next/dynamic";
+import React, { useState, useEffect, useRef } from "react";
+import Papa from "papaparse";
 import {
   IconClipboardCopy,
   IconFileBroken,
   IconSignature,
 } from "@tabler/icons-react";
 import { BentoGridItem } from "@/components/ui/bento-grid";
-import D3Map from "@/components/D3map";
-import FlipCard from "@/components/animata/card/flip-card";
+const D3Map = dynamic(() => import("@/components/D3map"), { ssr: false });
 import { TransitionPanel } from "@/components/core/transition-panel";
 import {
   Carousel,
@@ -16,16 +16,26 @@ import {
   CarouselNavigation,
   CarouselItem,
 } from "@/components/core/carousel";
-import L from "leaflet";
-import "leaflet-routing-machine";
-import "leaflet/dist/leaflet.css";
+import ReactMarkdown from "react-markdown";
+
+const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 
 export default function BentoGridDemo() {
+  // -----------------------------
+  // 1) STATE FOR TIMES, HOURS, ETC.
+  // -----------------------------
   const [maxHours, setMaxHours] = useState(4);
   const [startHour, setStartHour] = useState(8);
   const [activeInputTab, setActiveInputTab] = useState(0);
   const [activeInfoTab, setActiveInfoTab] = useState(0);
+  const [startingLocation, setStartingLocation] = useState("");
+  const [startingH3Cell, setStartingH3Cell] = useState<string | null>(null); // Starting location H3 cell
+  const [filteredSuggestions, setFilteredSuggestions] = useState<CsvRow[]>([]); // To hold filtered suggestions
 
+  // The selected H3 cell from the D3 Map
+  const [selectedH3Cell, setSelectedH3Cell] = useState(null);
+
+  // For routing map (Paris -> Bordeaux in this example)
   const [startLocation, setStartLocation] = useState({
     lat: 48.8566, // Paris
     lng: 2.3522,
@@ -35,68 +45,102 @@ export default function BentoGridDemo() {
     lng: -0.5792,
   });
 
-  // Route Map Component
-  const RouteMap = () => {
-    const mapRef = React.useRef(null);
+  // -----------------------------
+  // 2) CSV DATA & CITY LOOKUP
+  // -----------------------------
+  interface CsvRow {
+    h3_cell: string;
+    lat: string;
+    lng: string;
+    city?: string;
+    image_1?: string;
+    image_2?: string;
+    image_3?: string;
+    description?: string;
+  }
 
-    React.useEffect(() => {
-      if (!mapRef.current) {
-        const map = L.map("route-map", {
-          zoomControl: false,
-        }).setView([47.08, 2.4], 6); // Center map between Paris and Bordeaux
+  const [csvData, setCsvData] = useState<CsvRow[]>([]);
+  const [cityData, setCityData] = useState<CsvRow | null>(null);
 
-        // Minimalist map tiles
-        L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-          {
-            attribution: "",
-            subdomains: "abcd",
-            maxZoom: 19,
-          }
-        ).addTo(map);
-
-        // Routing control
-        const routingControl = L.Routing.control({
-          waypoints: [
-            L.latLng(startLocation.lat, startLocation.lng), // Starting point
-            L.latLng(destinationLocation.lat, destinationLocation.lng), // Destination
-          ],
-          createMarker: () => null, // No markers
-          routeWhileDragging: false,
-          show: false, // No textual route info
-          addWaypoints: false,
-          lineOptions: {
-            styles: [{ color: "#3388ff", weight: 4 }], // Route line style
-          },
-          formatter: new L.Routing.Formatter({
-            itineraryBuilder: null, // Disable textual directions
-          }),
-        }).addTo(map);
-
-        routingControl.on("routesfound", function () {
-          const container = routingControl.getContainer();
-          if (container && container.parentNode) {
-            container.parentNode.removeChild(container);
-          }
+  useEffect(() => {
+    // Update startLocation based on startingH3Cell
+    if (startingH3Cell && csvData.length > 0) {
+      const startRow = csvData.find((row) => row.h3_cell === startingH3Cell);
+      if (startRow) {
+        setStartLocation({
+          lat: parseFloat(startRow.lat),
+          lng: parseFloat(startRow.lng),
         });
-
-        mapRef.current = map;
       }
-    }, [startLocation, destinationLocation]);
+    }
 
-    return (
-      <div
-        id="route-map"
-        style={{
-          height: "400px",
-          width: "100%",
-          border: "1px solid #ccc",
-        }}
-      ></div>
-    );
+    // Update destinationLocation based on selectedH3Cell
+    if (selectedH3Cell && csvData.length > 0) {
+      const destinationRow = csvData.find(
+        (row) => row.h3_cell === selectedH3Cell
+      );
+      if (destinationRow) {
+        setDestinationLocation({
+          lat: parseFloat(destinationRow.lat),
+          lng: parseFloat(destinationRow.lng),
+        });
+      }
+    }
+  }, [startingH3Cell, selectedH3Cell, csvData]);
+
+  // Parse the CSV on first render
+  useEffect(() => {
+    Papa.parse("/enriched_cities_dev.csv", {
+      download: true,
+      header: true, // treats first row as a header
+      complete: (results) => {
+        setCsvData(results.data as CsvRow[]);
+      },
+      error: (err) => {
+        console.error("Error parsing CSV:", err);
+      },
+    });
+  }, []);
+
+  // When selectedH3Cell changes, or when csvData is loaded, find the matching row
+  useEffect(() => {
+    if (selectedH3Cell && csvData.length > 0) {
+      console.log("match with csv");
+      const row = csvData.find((item) => item.h3_cell === selectedH3Cell);
+      setCityData(row || null);
+    } else {
+      // If no cell selected or no CSV loaded yet
+      setCityData(null);
+    }
+  }, [selectedH3Cell, csvData]);
+
+  // Handler that D3Map calls when user clicks on an H3 cell
+  const handleH3CellSelect = (h3Cell: React.SetStateAction<null>) => {
+    setSelectedH3Cell(h3Cell);
+    console.log("Selected H3 Cell:", h3Cell);
   };
 
-  // Tabs for User Input
+  // Dropdown suggestion click handler
+  interface Suggestion {
+    city: string;
+    h3_cell: string;
+  }
+
+  const handleSuggestionSelect = (suggestion: CsvRow) => {
+    if (suggestion.city) {
+      setStartingLocation(suggestion.city); // Update the city name
+      setStartingH3Cell(suggestion.h3_cell); // Update starting H3 cell
+      setFilteredSuggestions([]); // Clear suggestions
+    }
+  };
+
+  // -----------------------------
+  // 3) ROUTE MAP COMPONENT
+  // -----------------------------
+
+  // -----------------------------
+  // 4) INPUT TABS
+  // -----------------------------
   const INPUT_TABS = [
     { title: "Time", state: maxHours, setState: setMaxHours, min: 1, max: 24 },
     {
@@ -109,159 +153,7 @@ export default function BentoGridDemo() {
     { title: "CO2", state: 50, setState: () => {}, min: 0, max: 500 },
   ];
 
-  // Tabs for Info Cards
-  const INFO_TABS = [
-    {
-      title: "Destination",
-      content: (
-        <div className="flex flex-col items-center justify-center space-y-6">
-          {/* Carousel */}
-          <div className="relative w-full max-w-lg">
-            <Carousel>
-              <CarouselContent className="basis-1/3">
-                <CarouselItem className="basis-1/3 flex justify-center">
-                  <div className="w-[150px] h-[150px]">
-                    <img
-                      src="/images/paris_2.jpg"
-                      alt="Paris Night"
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  </div>
-                </CarouselItem>
-                <CarouselItem className="basis-1/3">
-                  <div className="w-[150px] h-[150px]">
-                    <img
-                      src="/images/paris_1.jpg"
-                      alt="Eiffel Tower"
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  </div>
-                </CarouselItem>
-                <CarouselItem className="basis-1/3">
-                  <div className="w-[150px] h-[150px]">
-                    <img
-                      src="/images/paris_3.jpg"
-                      alt="Louvre Museum"
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  </div>
-                </CarouselItem>
-                <CarouselItem className="basis-1/3">
-                  <div className="w-[150px] h-[150px]">
-                    <img
-                      src="https://upload.wikimedia.org/wikipedia/commons/c/c0/Paris_Eiffel_Tower_and_Seine.jpg"
-                      alt="Sacré-Cœur"
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  </div>
-                </CarouselItem>
-              </CarouselContent>
-              <CarouselNavigation />
-            </Carousel>
-          </div>
-
-          {/* Information */}
-          <div className="overflow-y-auto max-h-72 px-4 text-center">
-            {/* Title */}
-            <h2 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">
-              Paris
-            </h2>
-            <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
-              Paris, the capital of France, is a global hub for art, fashion,
-              gastronomy, and culture. Known as the{" "}
-              <strong>"City of Light"</strong>, it is home to iconic landmarks
-              and attractions:
-            </p>
-            <ul className="list-disc list-inside mt-4 text-sm text-neutral-600 dark:text-neutral-400 text-left md:text-center">
-              <li>
-                <a
-                  href="https://www.toureiffel.paris/en"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  Eiffel Tower
-                </a>
-                : The most famous symbol of Paris, offering stunning views from
-                its observation decks.
-              </li>
-              <li>
-                <a
-                  href="https://www.louvre.fr/en"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  Louvre Museum
-                </a>
-                : The world's largest art museum, home to masterpieces like the
-                Mona Lisa and the Venus de Milo.
-              </li>
-              <li>
-                <a
-                  href="https://www.notredamedeparis.fr/en/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  Notre-Dame Cathedral
-                </a>
-                : A masterpiece of Gothic architecture and a symbol of Parisian
-                heritage.
-              </li>
-              <li>
-                <a
-                  href="https://en.musee-orsay.fr/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  Musée d'Orsay
-                </a>
-                : An art museum housed in a former railway station, featuring
-                works from Impressionist masters.
-              </li>
-              <li>
-                <a
-                  href="https://www.sacre-coeur-montmartre.com/english/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  Sacré-Cœur Basilica
-                </a>
-                : Located at the highest point in Paris, offering breathtaking
-                panoramic views of the city.
-              </li>
-              <li>
-                <a
-                  href="https://www.chateauversailles.fr/homepage"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  Palace of Versailles
-                </a>
-                : A short trip from the city, this opulent palace showcases
-                French royal history and gardens.
-              </li>
-            </ul>
-            <p className="text-center mt-4 text-sm text-neutral-600 dark:text-neutral-400">
-              Discover hidden gems like the quaint streets of{" "}
-              <strong>Montmartre</strong>, the bustling charm of the{" "}
-              <strong>Latin Quarter</strong>, and the serene beauty of the{" "}
-              <strong>Jardin des Tuileries</strong>. Paris is not just a city
-              but an unforgettable experience waiting for you to explore.
-            </p>
-          </div>
-        </div>
-      ),
-    },
-    { title: "Route", content: <RouteMap /> },
-    { title: "Info", content: "info" },
-  ];
-
-  // User Input Tab Panel
+  // The User Input Panel
   const userInputPanel = (
     <div>
       <div className="mb-4 flex space-x-2">
@@ -306,10 +198,162 @@ export default function BentoGridDemo() {
           ))}
         </TransitionPanel>
       </div>
+      <div className="mt-4">
+        <label
+          className="block text-sm font-medium mb-1"
+          htmlFor="Starting Location"
+        >
+          Starting Location:
+        </label>
+        <input
+          id="Starting Location"
+          type="text"
+          value={startingLocation}
+          onChange={(e) => {
+            const input = e.target.value;
+            setStartingLocation(input);
+
+            // Filter valid rows where `city` exists and matches the input
+            const matches = csvData.filter(
+              (row) =>
+                row.city && // Ensure `city` exists
+                typeof row.city === "string" && // Ensure `city` is a string
+                row.city.toLowerCase().includes(input.toLowerCase()) // Check for matches
+            );
+
+            setFilteredSuggestions(matches);
+          }}
+          placeholder="Enter your starting location"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+        />
+
+        {/* Suggestions Dropdown */}
+        {filteredSuggestions.length > 0 && (
+          <div className="relative">
+            <ul className="absolute z-10 bg-white border border-zinc-300 w-full rounded-md max-h-60 overflow-auto shadow-lg">
+              {filteredSuggestions.map((suggestion, index) => (
+                <li
+                  key={index}
+                  className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
+                  onClick={() => handleSuggestionSelect(suggestion)}
+                >
+                  {suggestion.city}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 
-  // Info Cards Tab Panel
+  // -----------------------------
+  // 5) DYNAMIC DESTINATION TAB
+  // -----------------------------
+  //
+  // We pull data from cityData (which is updated from the CSV).
+  // We'll replicate the structure you had for the "Paris" example,
+  // but show images and text from cityData where possible.
+
+  const DynamicDestinationContent = () => {
+    // If no cityData, show a simple placeholder
+    if (!cityData) {
+      return (
+        <div className="p-4 text-center text-sm text-neutral-500">
+          No city selected yet, or no data found.
+        </div>
+      );
+    }
+
+    // Prepare images (we check if they exist in CSV)
+    const images = [];
+    if (cityData.image_1) images.push(cityData.image_1);
+    if (cityData.image_2) images.push(cityData.image_2);
+    if (cityData.image_3) images.push(cityData.image_3);
+
+    return (
+      <div className="flex flex-col items-center justify-center space-y-6">
+        {/* Carousel of up to 3 images */}
+        <div className="relative w-full max-w-lg">
+          <Carousel>
+            <CarouselContent className="basis-1/3">
+              {images.length > 0 ? (
+                images.map((imgUrl, idx) => (
+                  <CarouselItem
+                    key={idx}
+                    className="basis-1/3 flex justify-center"
+                  >
+                    <div className="w-[150px] h-[150px]">
+                      <img
+                        src={imgUrl}
+                        alt={cityData.city}
+                        className="w-full h-full object-cover rounded-md"
+                      />
+                    </div>
+                  </CarouselItem>
+                ))
+              ) : (
+                <CarouselItem className="basis-1/3 flex justify-center">
+                  <div className="w-[150px] h-[150px] bg-gray-200 text-gray-400 flex items-center justify-center rounded-md">
+                    No Images
+                  </div>
+                </CarouselItem>
+              )}
+            </CarouselContent>
+            <CarouselNavigation />
+          </Carousel>
+        </div>
+
+        {/* Information */}
+        <div className="overflow-y-auto max-h-72 px-4 text-center">
+          {/* City Title */}
+          <div className="text-sm text-neutral-600 dark:text-neutral-400 mt-2 whitespace-pre-line">
+            <ReactMarkdown
+              components={{
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    className="text-blue-600 underline hover:text-blue-800"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {cityData.description}
+            </ReactMarkdown>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // -----------------------------
+  // 6) INFO TABS (INCL. DESTINATION)
+  // -----------------------------
+  const INFO_TABS = [
+    {
+      title: "Destination",
+      content: <DynamicDestinationContent />,
+    },
+    {
+      title: "Route",
+      content: <RouteMap />,
+    },
+    {
+      title: "Info",
+      content: (
+        <div className="p-4 text-center">
+          {/* You can customize a third tab here if desired */}
+          Additional city info or random tab.
+        </div>
+      ),
+    },
+  ];
+
+  // The Info Cards Panel
   const infoCardsPanel = (
     <div>
       <div className="mb-4 flex space-x-2">
@@ -347,16 +391,22 @@ export default function BentoGridDemo() {
     </div>
   );
 
-  // Main Grid Items
+  // -----------------------------
+  // 7) BUILD THE MAIN GRID
+  // -----------------------------
   const items = [
     {
       title: "Map",
-      description: "Explore the birth of groundbreaking ideas and inventions.",
+      description: "Explore the map. Click on a cell to load city info.",
       header: (
         <div className="relative h-full w-full">
           <div className="absolute top-[60%] left-[40%] transform -translate-x-1/2 -translate-y-1/2">
             <div className="w-[700px] h-[700px]">
-              <D3Map maxHours={maxHours} startHour={startHour} />
+              <D3Map
+                maxHours={maxHours}
+                startHour={startHour}
+                onH3CellSelect={handleH3CellSelect}
+              />
             </div>
           </div>
         </div>
@@ -377,6 +427,9 @@ export default function BentoGridDemo() {
     },
   ];
 
+  // -----------------------------
+  // 8) RENDER
+  // -----------------------------
   return (
     <div className="flex flex-col justify-between max-w-7xl px-4 mx-auto mt-8 h-[calc(100vh-50px)]">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
