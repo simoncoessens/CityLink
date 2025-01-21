@@ -222,7 +222,7 @@ export default function BentoGridDemo() {
               type="range"
               min={tab.min}
               max={tab.max}
-              step="0.01"
+              step="0.05"
               value={tab.state}
               onChange={(e) => tab.setState(parseFloat(e.target.value))}
               className="w-full"
