@@ -11,6 +11,11 @@ const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
 
 const D3Map = ({ maxHours = 4, startHour = 9 }) => {
+  const filterTransportModes = {
+    TRAIN: false,
+    BUS: true,
+    REGIONAL: true,
+  }
   const containerRef = useRef(null);
   const MAP_WIDTH = 900;
   const MAP_HEIGHT = 800;
@@ -107,7 +112,9 @@ const D3Map = ({ maxHours = 4, startHour = 9 }) => {
         .style("cursor", "pointer")
         .on("mouseover", function (e,d) {
           // d3.select(this).attr("fill", "rgba(0, 123, 255, 0.5)");
-          console.log(getExtraInformation(routes[d.h3_cell]));
+          if (routes[d.h3_cell]) {
+            console.log(getExtraInformation(routes[d.h3_cell]));
+          }
         })
         .on("mouseout", function () {
           // d3.select(this).attr("fill", "rgba(255,255,255, 0.3)");
@@ -201,6 +208,11 @@ const D3Map = ({ maxHours = 4, startHour = 9 }) => {
                 const newH3Cells = tripDictionary[trip_id] || [];
                 for (const newH3Cell of newH3Cells) {
                     const {h3_cell: newH3CellId, departure_date: newDepartureDate, transport_mode} = newH3Cell;
+                    // Filter by transport mode
+                    if (!filterTransportModes[transport_mode]){
+                        continue;
+                    }
+
                     let newElapsedTime = getDateDiffInMinutes(startDate, newDepartureDate);
                     if (newElapsedTime <= currentElapsedTime){
                         continue;
