@@ -340,7 +340,12 @@ export default function BentoGridDemo() {
     },
     {
       title: "Route",
-      content: <RouteMap />,
+      content: (
+        <RouteMap
+          startLocation={startLocation}
+          destinationLocation={destinationLocation}
+        />
+      ),
     },
     {
       title: "Info",

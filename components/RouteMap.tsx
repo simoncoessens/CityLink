@@ -2,8 +2,17 @@
 
 import React, { useEffect, useRef } from "react";
 
-const RouteMap: React.FC = () => {
-  const mapRef = useRef(null);
+interface RouteMapProps {
+  startLocation: { lat: number; lng: number };
+  destinationLocation: { lat: number; lng: number };
+}
+
+const RouteMap: React.FC<RouteMapProps> = ({
+  startLocation,
+  destinationLocation,
+}) => {
+  const mapRef = useRef<L.Map | null>(null);
+  const routingControlRef = useRef<L.Routing.Control | null>(null);
 
   useEffect(() => {
     // Ensure the map logic only runs in the client-side
@@ -13,13 +22,15 @@ const RouteMap: React.FC = () => {
     (async () => {
       const L = (await import("leaflet")).default;
       await import("leaflet-routing-machine");
+      await import("leaflet/dist/leaflet.css");
 
+      // Initialize the map if it doesn't exist
       if (!mapRef.current) {
-        const map = L.map("route-map", {
+        mapRef.current = L.map("route-map", {
           zoomControl: false,
-        }).setView([47.08, 2.4], 6); // Center map between Paris and Bordeaux
+        }).setView([47.08, 2.4], 6); // Default center position
 
-        // Minimalist map tiles
+        // Add tile layer
         L.tileLayer(
           "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
           {
@@ -27,37 +38,38 @@ const RouteMap: React.FC = () => {
             subdomains: "abcd",
             maxZoom: 19,
           }
-        ).addTo(map);
-
-        // Routing control
-        const routingControl = L.Routing.control({
-          waypoints: [
-            L.latLng(48.8566, 2.3522), // Paris
-            L.latLng(44.8378, -0.5792), // Bordeaux
-          ],
-          createMarker: () => null, // No markers
-          routeWhileDragging: false,
-          show: false, // No textual route info
-          addWaypoints: false,
-          lineOptions: {
-            styles: [{ color: "#3388ff", weight: 4 }], // Route line style
-          },
-          formatter: new L.Routing.Formatter({
-            itineraryBuilder: null, // Disable textual directions
-          }),
-        }).addTo(map);
-
-        routingControl.on("routesfound", function () {
-          const container = routingControl.getContainer();
-          if (container && container.parentNode) {
-            container.parentNode.removeChild(container);
-          }
-        });
-
-        mapRef.current = map;
+        ).addTo(mapRef.current);
       }
+
+      // Remove the existing routing control if present
+      if (routingControlRef.current) {
+        mapRef.current.removeControl(routingControlRef.current);
+      }
+
+      // Add routing control with updated waypoints
+      routingControlRef.current = L.Routing.control({
+        waypoints: [
+          L.latLng(startLocation.lat, startLocation.lng), // Start location
+          L.latLng(destinationLocation.lat, destinationLocation.lng), // Destination
+        ],
+        createMarker: () => null, // No markers
+        routeWhileDragging: false,
+        show: false, // No textual route info
+        addWaypoints: false,
+        lineOptions: {
+          styles: [{ color: "#3388ff", weight: 4 }], // Route line style
+        },
+      }).addTo(mapRef.current);
+
+      // Clean up unwanted UI elements
+      routingControlRef.current.on("routesfound", function () {
+        const container = routingControlRef.current?.getContainer();
+        if (container && container.parentNode) {
+          container.parentNode.removeChild(container);
+        }
+      });
     })();
-  }, []);
+  }, [startLocation, destinationLocation]); // Watch for changes in locations
 
   return (
     <div
