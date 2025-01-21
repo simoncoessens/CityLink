@@ -12,9 +12,13 @@ const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
 const D3Map = ({ maxHours = 4, startHour = 9 }) => {
   const filterTransportModes = {
-    TRAIN: false,
+    TRAIN: true,
     BUS: true,
     REGIONAL: true,
+  }
+  const limits = {
+    money: 80,
+    co2: 10
   }
   const containerRef = useRef(null);
   const MAP_WIDTH = 900;
@@ -211,6 +215,15 @@ const D3Map = ({ maxHours = 4, startHour = 9 }) => {
                     // Filter by transport mode
                     if (!filterTransportModes[transport_mode]){
                         continue;
+                    }
+
+                    //filter by limits
+                    const {co2EmissionsKg, moneyEuros} = getExtraInformation({
+                      ...detailDistance, 
+                      [transport_mode]: detailDistance[transport_mode] + getDistanceKmH3Cells(currentH3Cell, newH3CellId)
+                    });
+                    if(co2EmissionsKg > limits.co2 || moneyEuros > limits.money){
+                      continue;
                     }
 
                     let newElapsedTime = getDateDiffInMinutes(startDate, newDepartureDate);
