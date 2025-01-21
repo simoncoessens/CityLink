@@ -105,8 +105,9 @@ const D3Map = ({ maxHours = 4, startHour = 8 }) => {
         .attr("stroke", "rgba(0, 0, 0, 0.8)")
         .attr("stroke-width", 1)
         .style("cursor", "pointer")
-        .on("mouseover", function () {
+        .on("mouseover", function (e,d) {
           // d3.select(this).attr("fill", "rgba(0, 123, 255, 0.5)");
+          console.log(routes[d.h3_cell]);
         })
         .on("mouseout", function () {
           // d3.select(this).attr("fill", "rgba(255,255,255, 0.3)");
@@ -225,12 +226,15 @@ const D3Map = ({ maxHours = 4, startHour = 8 }) => {
   // Create dictionaries for H3 cells and trips
   function createTripDictionary(data) {
     return data.reduce((acc, row) => {
-      if (!acc[row.trip_id]) acc[row.trip_id] = [];
-      acc[row.trip_id].push({
-        h3_cell: row.h3_cell,
-        departure_date: row.departure_date,
-      });
-      return acc;
+        if (!acc[row.trip_id]) {
+            acc[row.trip_id] = [];
+        }
+        acc[row.trip_id].push({
+            h3_cell: row.h3_cell,
+            departure_date: row.departure_date,
+            transport_mode: row.transport_mode
+        });
+        return acc;
     }, {});
   }
 
