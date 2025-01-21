@@ -7,15 +7,98 @@ import PriorityQueue from "ts-priority-queue";
 // Time parsing function
 const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
+
 const D3Map = ({ maxHours = 4, startHour = 8 }) => {
+  function getFrenchCities() {
+    return d3.csv("data/FrenchCities_with_h3.csv").then(data => {
+        return data.reduce((acc, row) => {
+            if (!acc[row.h3_cell]) {
+                acc[row.h3_cell] = [];
+            }
+            acc[row.h3_cell].push({
+                city: row.city_ascii,
+                population: row.population,
+            });
+            return acc;
+        }, {});
+    });
+  }
+  
+  //h3,x,y
+  function getH3LtLn() {
+    return d3.csv("data/h3_info.csv").then(data => {
+        return data.reduce((acc, row) => {
+            if (!acc[row.h3]) {
+                acc[row.h3] = [];
+            }
+            acc[row.h3].push({
+                x: parseFloat(row.x),
+                y: parseFloat(row.y),
+            });
+            return acc;
+        }, {});
+    });
+  }
+
+  function parseCSVData(csvPath) {
+    return d3.csv(csvPath).then(csvData => {
+        return csvData.map(row => ({
+            route_id: row.route_id,
+            route_long_name: row.route_long_name,
+            company: row.company,
+            transport_mode: row.transport_mode,
+            stop_sequence: row.stop_sequence,
+            arrival_time: parseDate(row.arrival_time),
+            departure_time: parseDate(row.departure_time),
+            stop_name: row.stop_name,
+            stop_lon: parseFloat(row.stop_lon),
+            stop_lat: parseFloat(row.stop_lat),
+            arrival_date: parseDate(row.arrival_date),
+            departure_date: parseDate(row.departure_date),
+            trip_id: row.trip_id,
+            h3_cell: row.h3_cell
+        }));
+    });
+  }
+  function getDistanceKmH3Cells(h3Cell1, h3Cell2){
+    const x1 = h3LtLn[h3Cell1][0].x;
+    const y1 = h3LtLn[h3Cell1][0].y;
+    const x2 = h3LtLn[h3Cell2][0].x;
+    const y2 = h3LtLn[h3Cell2][0].y;
+    return Math.sqrt((x1-x2)**2 + (y1-y2)**2)/1000;
+  }
+
+  function getDateDiffInMinutes(startDate, endDate) {
+    return (endDate - startDate) / 1000 / 60;
+  }
+
+
   const containerRef = useRef(null);
   const MAP_WIDTH = 900;
   const MAP_HEIGHT = 800;
 
-  const [tripDictionary, setTripDictionary] = useState({});
-  const [h3CellDictionary, setH3CellDictionary] = useState({});
-  const [userSelectedCell, setUserSelectedCell] = useState(null);
-  const [maxDistance, setMaxDistance] = useState(maxHours * 60); // Convert hours to minutes
+  let [tripDictionary, setTripDictionary] = useState({});
+  let [h3CellDictionary, setH3CellDictionary] = useState({});
+  let [userSelectedCell, setUserSelectedCell] = useState(null);
+  let [maxDistance, setMaxDistance] = useState(maxHours * 60); // Convert hours to minutes
+  let frenchCitiesByH3 = {};
+  let routes = {}
+  let h3LtLn = {}
+
+  parseCSVData('data/polygons.csv').then(data => {
+      tripDictionary = createTripDictionary(data);
+      h3CellDictionary = createH3CellDictionary(data);
+  });
+
+  // Fetch and save the dictionary
+  getH3LtLn().then(data => {
+      h3LtLn = data;
+  });
+
+  // Fetch and save the dictionary
+  getFrenchCities().then(data => {
+      frenchCitiesByH3 = data;
+  });
 
   useEffect(() => {
     // Create the SVG container
@@ -144,49 +227,58 @@ const D3Map = ({ maxHours = 4, startHour = 8 }) => {
   }
 
   // BFS function to calculate shortest distances
-  function getShortestDistanceFromH3CellSource(h3CellSource, startDate) {
-    const distances = Object.keys(h3CellDictionary).reduce((acc, key) => {
-      acc[key] = 10000000; // Default large distance
-      return acc;
-    }, {});
-
+  function getShortestDistanceFromH3CellSource(h3CellSource, startDate){
+    const visited = new Set();
+    routes = {};
     const queue = new PriorityQueue({
-      comparator: (a, b) => a.distance - b.distance,
-    });
-
-    queue.queue({ h3Cell: h3CellSource, distance: 0 });
-
+        comparator: (a, b) => b.distance - a.distance // Sort by `distance` in ascending order
+      });
+    // const queue = [{ h3Cell: h3CellSource, distance: 0 }];
+    const times = Object.fromEntries(Object.entries(h3CellDictionary).map(([k,v]) => [k,10000000]))
+    queue.queue({ h3Cell: h3CellSource, time: 0, detailDistance: {
+        TRAIN: 0,
+        BUS: 0,
+        REGIONAL: 0
+    } });
+    
     while (queue.length > 0) {
-      const { h3Cell: currentH3Cell, distance: currentDistance } =
-        queue.dequeue();
-
-      if (distances[currentH3Cell] > currentDistance) {
-        distances[currentH3Cell] = currentDistance;
-      }
-
-      const trips = h3CellDictionary[currentH3Cell] || [];
-      for (const trip of trips) {
-        const { trip_id, departure_date } = trip;
-
-        if ((departure_date - startDate) / 1000 / 60 - currentDistance >= 30) {
-          const newH3Cells = tripDictionary[trip_id] || [];
-          for (const newH3Cell of newH3Cells) {
-            const newDistance =
-              (newH3Cell.departure_date - startDate) / 1000 / 60;
-            if (
-              newDistance > currentDistance &&
-              distances[newH3Cell.h3_cell] > newDistance &&
-              newDistance < maxDistance
-            ) {
-              queue.queue({ h3Cell: newH3Cell.h3_cell, distance: newDistance });
-            }
-          }
+        const { h3Cell: currentH3Cell, time: currentElapsedTime, detailDistance: detailDistance } = queue.dequeue();
+        if (times[currentH3Cell] !== undefined && times[currentH3Cell] > currentElapsedTime) {
+            times[currentH3Cell] = currentElapsedTime;
+            routes [currentH3Cell] = detailDistance;
         }
-      }
+        
+        const trips = h3CellDictionary[currentH3Cell] || [];
+        for (const trip of trips) {
+            const { trip_id, departure_date: departure_date_trip} = trip;
+            
+            // If the trip departure date minus the current distance is less than 30 minutes,
+            // then add the valid h3 cells to the queue
+            if (getDateDiffInMinutes(startDate, departure_date_trip)  >= currentElapsedTime + 30) {
+                const newH3Cells = tripDictionary[trip_id] || [];
+                for (const newH3Cell of newH3Cells) {
+                    const {h3_cell: newH3CellId, departure_date: newDepartureDate, transport_mode} = newH3Cell;
+                    let newElapsedTime = getDateDiffInMinutes(startDate, newDepartureDate);
+                    if (newElapsedTime <= currentElapsedTime){
+                        continue;
+                    }
+                    if (
+                        newDepartureDate > departure_date_trip
+                        && times[newH3CellId] > newElapsedTime 
+                        && newElapsedTime < maxDistance
+                    ) {
+                        queue.queue({ h3Cell: newH3CellId, time: newElapsedTime, detailDistance: {
+                            ...detailDistance, 
+                            [transport_mode]: detailDistance[transport_mode] + getDistanceKmH3Cells(currentH3Cell, newH3CellId)
+                        } });
+                    }
+                }
+            }
+        }
     }
-
-    return distances;
-  }
+    
+    return times;
+}
 
   // Create dictionaries for H3 cells and trips
   function createTripDictionary(data) {
