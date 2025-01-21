@@ -216,15 +216,16 @@ export default function BentoGridDemo() {
           {INPUT_TABS.map((tab, index) => (
             <div key={index} className="py-2">
               <label className="block text-sm font-medium">
-                {tab.title}: {tab.state}
+              {tab.title}: {tab.state.toFixed(2)}
               </label>
               <input
-                type="range"
-                min={tab.min}
-                max={tab.max}
-                value={tab.state}
-                onChange={(e) => tab.setState(parseInt(e.target.value))}
-                className="w-full"
+              type="range"
+              min={tab.min}
+              max={tab.max}
+              step="0.01"
+              value={tab.state}
+              onChange={(e) => tab.setState(parseFloat(e.target.value))}
+              className="w-full"
               />
             </div>
           ))}
