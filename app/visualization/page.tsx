@@ -25,7 +25,7 @@ export default function BentoGridDemo() {
   // -----------------------------
   // 1) STATE FOR TIMES, HOURS, ETC.
   // -----------------------------
-  const [maxHours, setMaxHours] = useState(4);
+  const [maxHours, setMaxHours] = useState(3);
   interface DetailInformation {
     co2EmissionsKg: number;
     moneyEuros: number;
@@ -41,8 +41,8 @@ export default function BentoGridDemo() {
   
   const [detailInformation, setDetailInformation] = useState<DetailInformation | null>(null);
   const [startHour, setStartHour] = useState(9);
-  const [money, setMoney] = useState(12);
-  const [co2, setCo2] = useState(0);
+  const [money, setMoney] = useState(100);
+  const [co2, setCo2] = useState(20);
   const [activeInputTab, setActiveInputTab] = useState(0);
   const [activeInfoTab, setActiveInfoTab] = useState(0);
   const [startingLocation, setStartingLocation] = useState("");
@@ -247,7 +247,7 @@ export default function BentoGridDemo() {
       state: startHour,
       setState: setStartHour,
       min: 1,
-      max: 9,
+      max: 24,
     },
     {
       title: "Budget",
@@ -256,7 +256,7 @@ export default function BentoGridDemo() {
       min: 0,
       max: 200,
     },
-    { title: "CO2", state: co2, setState: setCo2, min: 0, max: 500 },
+    { title: "CO2", state: co2, setState: setCo2, min: 0, max: 20 },
   ];
 
   const userInputPanel = (
@@ -289,7 +289,7 @@ export default function BentoGridDemo() {
           {INPUT_TABS.map((tab, index) => (
             <div key={index} className="py-2">
               <label className="block text-sm font-medium">
-                {tab.title}: {tab.state.toFixed(2)}
+                 {tab.state.toFixed(2)} {tab.title === "Budget" ? "€" : tab.title === "CO2" ? "kg" : "hours"}
               </label>
               <input
                 type="range"
@@ -480,6 +480,7 @@ export default function BentoGridDemo() {
 
                 <p className="mt-4 text-sm text-neutral-500">
                   Disclaimer: Prices, CO2 emissions, and time spent are approximations and may vary based on various factors.
+                  The values shown are for one way trip.
                 </p>
             </div>
           )}

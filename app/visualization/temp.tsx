@@ -27,7 +27,7 @@ export default function BentoGridDemo() {
   // -----------------------------
   // 1) STATE FOR TIME, HOURS, ETC.
   // -----------------------------
-  const [maxHours, setMaxHours] = useState(4);
+  const [maxHours, setMaxHours] = useState(2);
   const [startHour, setStartHour] = useState(9);
   const [activeInputTab, setActiveInputTab] = useState(0);
   const [activeInfoTab, setActiveInfoTab] = useState(0);
@@ -489,8 +489,11 @@ export default function BentoGridDemo() {
               <D3Map
                 maxHours={maxHours}
                 startHour={startHour}
+                money={money}
+                co2={co2}
                 onH3CellSelect={handleH3CellSelect}
                 startingH3Cell={startingH3Cell}
+                setDetailInformation={setDetailInformation}
               />
             </div>
           </div>

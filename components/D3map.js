@@ -8,7 +8,7 @@ import PropTypes from "prop-types";
 // Time parsing function
 const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSelect, startingH3Cell, setDetailInformation}) => {
+const D3Map = ({ maxHours = 2, startHour = 8, money = 12, co2 = 10, onH3CellSelect, startingH3Cell, setDetailInformation}) => {
   const containerRef = useRef(null);
 
   // ------ State variables ------
@@ -22,7 +22,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
   const frenchCitiesByH3Ref = useRef({});
   const routesRef = useRef({});   // Will hold BFS route info
   const finalDistances = useRef({});
-
+  const limits = useRef({ money: money, co2: co2 });
   // ------ Constants ------
   const MAP_WIDTH = 900;
   const MAP_HEIGHT = 800;
@@ -30,10 +30,6 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
     TRAIN: true,
     BUS: true,
     REGIONAL: true,
-  };
-  const limits = {
-    money: 8000,
-    co2: 1000,
   };
 
   // ---------------------- 1. INITIALIZE MAP ONCE ON MOUNT ----------------------
@@ -62,7 +58,8 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
       finalDistances.current = updateMap(svg, startingH3Cell);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [maxHours, startingH3Cell, money, co2]);
+    limits.current = { money: money, co2: co2 };
+  }, [maxHours, startingH3Cell, money, co2, startHour]);
 
   /**
    * Called only once when the component mounts. This function:
@@ -293,7 +290,9 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
     // Update the legend max distance label
     d3.select("#max-label").text(`${maxHours} Hours`);
     // For BFS, define a start date/time
-    const startDate = parseDate(`2024-11-03 ${startHour}:00:00`);
+    const hours = Math.floor(startHour).toString().padStart(2, '0');
+    const minutes = Math.floor((startHour*60) % 60).toString().padStart(2, '0');
+    const startDate = parseDate(`2024-11-03 ${hours}:${minutes}:00`);
 
     // BFS returns a dictionary of travel times from source
     const distances = getShortestDistanceFromH3CellSource(selectedCell, startDate);
@@ -374,7 +373,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
             [transport_mode]: detailDistance[transport_mode] + distKm,
           };
           const { co2EmissionsKg, moneyEuros } = getExtraInformation(updatedDetailDistance);
-          if (co2EmissionsKg > limits.co2 || moneyEuros > limits.money) {
+          if (co2EmissionsKg > limits.current.co2 || moneyEuros > limits.current.money) {
             continue;
           }
 
