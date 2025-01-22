@@ -55,15 +55,18 @@ const contentSections = [
     description: (
       <>
         <p>
-          <b>Which cities in France are best suited for weekend trips?</b>
+          <b>Which cities in France are best suited for weekend trips? </b>
           This research delves into understanding the most viable destinations
-          for short-term travel using public transport, with a focus on
+          for weekend travel using public transport, with a focus on
           efficiency, accessibility, and sustainability.
         </p>
         <p>
           Using data from popular transport providers like <b>SNCF</b> (train)
           and <b>FlixBus</b>, we aim to uncover patterns in travel times and
-          environmental impact across various cities in France.
+          environmental impact across various cities in France. We calculate
+          the time and cost of travel to popular destinations, providing
+          students with valuable insights for planning their next weekend
+          getaway.
         </p>
       </>
     ),
@@ -74,16 +77,12 @@ const contentSections = [
     description: (
       <>
         <p>
-          Data visualizations are at the heart of this project. Using tools like{" "}
-          <b>Tableau</b>, we explore:
+          Data visualizations are at the heart of this project. We explore:
         </p>
         <ul>
-          <li>Busiest travel hubs in France and their connections.</li>
-          <li>
-            Heatmaps of CO<sub>2</sub> emissions for travel originating from key
-            cities like Paris.
-          </li>
-          <li>Travel times visualized against city population sizes.</li>
+          <li>Co2 emissions while using public transport.</li>
+          <li>Travel times to popular destinations.</li>
+          <li>Cost-effective routes for students.</li>
         </ul>
         <p>
           These visualizations allow us to tell the story of France's public
@@ -112,6 +111,9 @@ const contentSections = [
           for students, encouraging informed decisions for more sustainable
           weekend trips. Visualizing this data fosters awareness and empowers
           individuals to minimize their carbon footprint.
+
+          We want to show the benefits of public transport vs private cars, and
+          airplanes.
         </p>
       </>
     ),
@@ -128,7 +130,6 @@ const contentSections = [
         <ul>
           <li>Top destinations reachable within 3-5 hours.</li>
           <li>Cost-effective routes using buses and trains.</li>
-          <li>Carbon emissions compared to city distances.</li>
         </ul>
         <p>
           The data-driven approach ensures students can find the perfect getaway
