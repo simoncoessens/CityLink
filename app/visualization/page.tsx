@@ -434,6 +434,7 @@ export default function BentoGridDemo() {
                 maxHours={maxHours}
                 startHour={startHour}
                 onH3CellSelect={handleH3CellSelect}
+                startingH3Cell={startingH3Cell}
               />
             </div>
           </div>
