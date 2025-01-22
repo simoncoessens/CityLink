@@ -17,6 +17,7 @@ import {
   CarouselItem,
 } from "@/components/core/carousel";
 import ReactMarkdown from "react-markdown";
+import Typewriter from "typewriter-effect";
 
 const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 
@@ -26,6 +27,8 @@ export default function BentoGridDemo() {
   // -----------------------------
   const [maxHours, setMaxHours] = useState(4);
   const [startHour, setStartHour] = useState(9);
+  const [money, setMoney] = useState(12);
+  const [co2, setCo2] = useState(0);
   const [activeInputTab, setActiveInputTab] = useState(0);
   const [activeInfoTab, setActiveInfoTab] = useState(0);
   const [startingLocation, setStartingLocation] = useState("");
@@ -185,6 +188,12 @@ export default function BentoGridDemo() {
       }
 
       setCityData(row || null);
+      if (row) {
+        setDestinationLocation({
+          lat: parseFloat(row.lat),
+          lng: parseFloat(row.lng),
+        });
+      }
     } else {
       setCityData(null);
     }
@@ -217,13 +226,20 @@ export default function BentoGridDemo() {
   const INPUT_TABS = [
     { title: "Time", state: maxHours, setState: setMaxHours, min: 1, max: 9 },
     {
-      title: "Money",
+      title: "Starting Time",
       state: startHour,
       setState: setStartHour,
-      min: 0,
-      max: 24,
+      min: 1,
+      max: 9,
     },
-    { title: "CO2", state: 50, setState: () => {}, min: 0, max: 500 },
+    {
+      title: "Budget",
+      state: money,
+      setState: setMoney,
+      min: 0,
+      max: 200,
+    },
+    { title: "CO2", state: co2, setState: setCo2, min: 0, max: 500 },
   ];
 
   const userInputPanel = (
@@ -377,7 +393,7 @@ export default function BentoGridDemo() {
         </div>
 
         {/* Information */}
-        <div className="overflow-y-auto max-h-72 px-4 text-center">
+        <div className="overflow-y-auto max-h-48 px-4 text-center">
           <div className="text-sm text-neutral-600 dark:text-neutral-400 mt-2 whitespace-pre-line">
             <ReactMarkdown
               components={{
@@ -475,11 +491,23 @@ export default function BentoGridDemo() {
         "Explore the map. Click on a destination to see its information.",
       header: (
         <div className="relative h-full w-full">
+          <h2 className="absolute top-4 left-1/2 transform -translate-x-1/2 text-black font-bold z-10">
+            <Typewriter
+              onInit={(typewriter) => {
+                typewriter
+                  .typeString("Begin by typing your starting location")
+                  .pauseFor(1000000) // Pauses indefinitely after typing
+                  .start();
+              }}
+            />
+          </h2>
           <div className="absolute top-[60%] left-[40%] transform -translate-x-1/2 -translate-y-1/2">
             <div className="w-[700px] h-[700px]">
               <D3Map
                 maxHours={maxHours}
                 startHour={startHour}
+                money={money}
+                co2={co2}
                 onH3CellSelect={handleH3CellSelect}
                 startingH3Cell={startingH3Cell}
               />

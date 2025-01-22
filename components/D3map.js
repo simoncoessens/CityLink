@@ -8,7 +8,7 @@ import PropTypes from "prop-types";
 // Time parsing function
 const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell}) => {
+const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSelect, startingH3Cell}) => {
   const containerRef = useRef(null);
 
   // ------ State variables ------
@@ -61,7 +61,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell}) =
       updateMap(svg, startingH3Cell);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [maxHours, startingH3Cell]);
+  }, [maxHours, startingH3Cell, money, co2]);
 
   /**
    * Called only once when the component mounts. This function:
@@ -125,62 +125,64 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell}) =
       .style("opacity", 0)
       .style("z-index", 1000); // Ensure the tooltip is in front
 
-      // Create an SVG container for the legend
-      const domainMin = maxDistance;
-      const domainMax = 0;
-      const legendWidth = 70;
-      const legendHeight = 700; 
-      const numSteps = 200; // Number of steps for sampling the color scale
-      const margin = 50; // Margin for the top and bottom
+    // Create an SVG container for the legend
+    const domainMin = maxDistance;
+    const domainMax = 0;
+    const legendWidth = 50;
+    const legendHeight = 500; 
+    const numSteps = 200; // Number of steps for sampling the color scale
+    const margin = 50; // Margin for the top and bottom
 
-      const legendsvg = svg // Change "body" to your specific container
+    const legendsvg = svg // Change "body" to your specific container
       .append("svg")
+      .attr("x", MAP_WIDTH - 800) // Move the legend to the right
+      .attr("y", MAP_HEIGHT - legendHeight - 200) // Move the legend lower on the 'y'
       .attr("width", legendWidth + 30) // Extra space for labels
       .attr("height", legendHeight + 30 + margin * 2) // Extra space for margin and labels
 
-      // Define the color scale
-      const colorScale2 = d3.scaleSequential(d3.interpolateRdYlGn)
-          .domain([domainMin, domainMax]);
+    // Define the color scale
+    const colorScale2 = d3.scaleSequential(d3.interpolateRdYlGn)
+      .domain([domainMin, domainMax]);
 
-      // Generate the color steps
-      const stepHeight = legendHeight / numSteps;
-      const steps = d3.range(numSteps).map(i => i / (numSteps - 1)); // [0, 1]
+    // Generate the color steps
+    const stepHeight = legendHeight / numSteps;
+    const steps = d3.range(numSteps).map(i => i / (numSteps - 1)); // [0, 1]
 
-      // Draw the legend as a series of rectangles
-      legendsvg.selectAll("rect")
-          .data(steps)
-          .enter()
-          .append("rect")
-          .attr("x", 0)
-          .attr("y", d => margin + stepHeight * d * (numSteps - 1))
-          .attr("width", legendWidth)
-          .attr("height", stepHeight)
-          .style("fill", d => colorScale2(domainMin + d * (domainMax - domainMin)));
+    // Draw the legend as a series of rectangles
+    legendsvg.selectAll("rect")
+      .data(steps)
+      .enter()
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", d => margin + stepHeight * d * (numSteps - 1))
+      .attr("width", legendWidth)
+      .attr("height", stepHeight)
+      .style("fill", d => colorScale2(domainMin + d * (domainMax - domainMin)));
 
-      // Add labels for min and max values
-      legendsvg.append("text")
-          .attr("x", 0)
-          .attr("y", legendHeight + margin + 20)
-          .attr("text-anchor", "start")
-          .style("font-size", "16px")
-          .text(`0 Hours`);
+    // Add labels for min and max values
+    legendsvg.append("text")
+      .attr("x", 0)
+      .attr("y", legendHeight + margin + 20)
+      .attr("text-anchor", "start")
+      .style("font-size", "16px")
+      .text(`0 Hours`);
 
-      legendsvg.append("text")
-          .attr("id", "max-label")
-          .attr("x", 0)
-          .attr("y", margin - 5)
-          .attr("text-anchor", "start")
-          .style("font-size", "16px")
-          .text(`${maxDistance / 60.0} Hours`);
-      
-      // Create a tooltip element
-      d3.select("body").append("div")
-          .attr("id", "tooltip")
-          .style("position", "absolute")
-          .style("display", "none")
-          .style("background", "white")
-          .style("border", "1px solid black")
-          .style("padding", "5px");
+    legendsvg.append("text")
+      .attr("id", "max-label")
+      .attr("x", 0)
+      .attr("y", margin - 5)
+      .attr("text-anchor", "start")
+      .style("font-size", "16px")
+      .text(`${maxDistance / 60.0} Hours`);
+    
+    // Create a tooltip element
+    d3.select("body").append("div")
+      .attr("id", "tooltip")
+      .style("position", "absolute")
+      .style("display", "none")
+      .style("background", "white")
+      .style("border", "1px solid black")
+      .style("padding", "5px");
   };
 
   /**
