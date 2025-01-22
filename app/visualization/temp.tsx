@@ -1,42 +1,48 @@
 "use client";
+
 import dynamic from "next/dynamic";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { cellToLatLng } from "h3-js"; // <-- ADD THIS
 import {
   IconClipboardCopy,
   IconFileBroken,
   IconSignature,
 } from "@tabler/icons-react";
 import { BentoGridItem } from "@/components/ui/bento-grid";
-const D3Map = dynamic(() => import("@/components/D3map"), { ssr: true });
 import { TransitionPanel } from "@/components/core/transition-panel";
 import {
   Carousel,
   CarouselContent,
-  CarouselNavigation,
   CarouselItem,
+  CarouselNavigation,
 } from "@/components/core/carousel";
 import ReactMarkdown from "react-markdown";
+import ReactTypingEffect from "react-typing-effect";
 
+// Dynamically import your maps
+const D3Map = dynamic(() => import("@/components/D3map"), { ssr: true });
 const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 
 export default function BentoGridDemo() {
   // -----------------------------
-  // 1) STATE FOR TIMES, HOURS, ETC.
+  // 1) STATE FOR TIME, HOURS, ETC.
   // -----------------------------
   const [maxHours, setMaxHours] = useState(4);
   const [startHour, setStartHour] = useState(9);
   const [activeInputTab, setActiveInputTab] = useState(0);
   const [activeInfoTab, setActiveInfoTab] = useState(0);
-  const [startingLocation, setStartingLocation] = useState("");
-  const [startingH3Cell, setStartingH3Cell] = useState<string | null>(null); // Starting location H3 cell
-  const [filteredSuggestions, setFilteredSuggestions] = useState<CsvRow[]>([]); // To hold filtered suggestions
 
-  // The selected H3 cell from the D3 Map
+  // Starting location typed by user & the H3 cell that corresponds to it
+  const [startingLocation, setStartingLocation] = useState("");
+  const [startingH3Cell, setStartingH3Cell] = useState<string | null>(null);
+
+  // Suggestions for auto‐completing typed city
+  const [filteredSuggestions, setFilteredSuggestions] = useState<CsvRow[]>([]);
+
+  // Destination from user’s click
   const [selectedH3Cell, setSelectedH3Cell] = useState<string | null>(null);
 
-  // For routing map (Paris -> Bordeaux in this example)
+  // For route map
   const [startLocation, setStartLocation] = useState({
     lat: 48.8566, // Paris
     lng: 2.3522,
@@ -63,8 +69,40 @@ export default function BentoGridDemo() {
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [cityData, setCityData] = useState<CsvRow | null>(null);
 
+  // For the h3_info.csv
+  interface H3InfoRow {
+    h3: string;
+    x: string;
+    y: string;
+  }
+  const [h3LookupData, setH3LookupData] = useState<{
+    [h3: string]: { lat: number; lng: number };
+  }>({});
+
+  // Load h3_info.csv
   useEffect(() => {
-    // Load CSV data once
+    Papa.parse("data/h3_info.csv", {
+      download: true,
+      header: true,
+      complete: (results) => {
+        const data = results.data as H3InfoRow[];
+        const lookup: { [h3: string]: { lat: number; lng: number } } = {};
+        data.forEach((row) => {
+          lookup[row.h3] = {
+            lat: parseFloat(row.x),
+            lng: parseFloat(row.y),
+          };
+        });
+        setH3LookupData(lookup);
+      },
+      error: (err) => {
+        console.error("Error parsing h3_info.csv:", err);
+      },
+    });
+  }, []);
+
+  // Load city CSV data
+  useEffect(() => {
     Papa.parse("/enriched_cities_dev.csv", {
       download: true,
       header: true,
@@ -77,9 +115,9 @@ export default function BentoGridDemo() {
     });
   }, []);
 
-  // Update the start/destination coordinates if we have matching H3s in CSV
+  // Update route map coords if we have matching H3s
   useEffect(() => {
-    // If user typed in a starting city that corresponds to an H3 cell:
+    // If user typed in a starting city that corresponds to an H3 cell
     if (startingH3Cell && csvData.length > 0) {
       const startRow = csvData.find((row) => row.h3_cell === startingH3Cell);
       if (startRow) {
@@ -104,21 +142,24 @@ export default function BentoGridDemo() {
     }
   }, [startingH3Cell, selectedH3Cell, csvData]);
 
-  // When selectedH3Cell changes (user clicks on map):
-  //  1) Try direct match in CSV
-  //  2) If no match, find the closest row in CSV by lat/lon using h3ToGeo + distance calc
+  // When selectedH3Cell changes:
+  // 1) Try direct match, or 2) nearest city in CSV
   useEffect(() => {
     if (selectedH3Cell && csvData.length > 0) {
       let row = csvData.find((item) => item.h3_cell === selectedH3Cell);
 
       if (!row) {
-        // If we didn't find a direct match, find the closest row by lat/lon
-        const [cellLat, cellLng] = cellToLatLng(selectedH3Cell);
-
-        // For “closest” matching, use Haversine or a simpler formula
-        function toRad(value: number) {
-          return (value * Math.PI) / 180;
+        // fallback with h3_info.csv
+        const h3Entry = h3LookupData[selectedH3Cell];
+        if (!h3Entry) {
+          setCityData(null);
+          return;
         }
+
+        // We have lat/lng from h3_info.csv
+        const cellLat = h3Entry.lat;
+        const cellLng = h3Entry.lng;
+
         function euclideanDistance(
           lat1: number,
           lon1: number,
@@ -138,38 +179,37 @@ export default function BentoGridDemo() {
           if (dist < minDist) {
             minDist = dist;
             closestRow = r;
-            console.log("Closest row:", dist);
           }
         }
         row = closestRow || undefined;
       }
-
       setCityData(row || null);
     } else {
       setCityData(null);
     }
-  }, [selectedH3Cell, csvData]);
+  }, [selectedH3Cell, csvData, h3LookupData]);
 
-  // Handler that D3Map calls when user clicks on an H3 cell
+  // Handle user clicking an H3 cell in D3Map
   const handleH3CellSelect = (h3Cell: string) => {
+    // Prevent clicking if no starting location is set
+    if (!startingH3Cell) return;
     setSelectedH3Cell(h3Cell);
     console.log("Selected H3 Cell:", h3Cell);
   };
 
-  // Suggestion select (from input box suggestions)
+  // Handle suggestion select (auto-complete)
   const handleSuggestionSelect = (suggestion: CsvRow) => {
     if (suggestion.city) {
-      setStartingLocation(suggestion.city); // Update the city name in text
-      setStartingH3Cell(suggestion.h3_cell); // Update the starting H3 cell
-      setFilteredSuggestions([]); // Clear suggestions
+      setStartingLocation(suggestion.city);
+      setStartingH3Cell(suggestion.h3_cell);
+      setFilteredSuggestions([]);
     }
   };
 
   // -----------------------------
   // 3) ROUTE MAP COMPONENT
+  // (No changes needed; just pass start/destination)
   // -----------------------------
-  // (No change needed here; uses startLocation/destinationLocation)
-  // ...
 
   // -----------------------------
   // 4) INPUT TABS
@@ -231,6 +271,8 @@ export default function BentoGridDemo() {
           ))}
         </TransitionPanel>
       </div>
+
+      {/* Starting Location Input with suggestions */}
       <div className="mt-4">
         <label
           className="block text-sm font-medium mb-1"
@@ -246,14 +288,13 @@ export default function BentoGridDemo() {
             const input = e.target.value;
             setStartingLocation(input);
 
-            // Filter valid rows where `city` is a string that includes the input
+            // Filter valid city rows
             const matches = csvData.filter(
               (row) =>
                 row.city &&
                 typeof row.city === "string" &&
                 row.city.toLowerCase().includes(input.toLowerCase())
             );
-
             setFilteredSuggestions(matches);
           }}
           placeholder="Enter your starting location"
@@ -281,7 +322,7 @@ export default function BentoGridDemo() {
   );
 
   // -----------------------------
-  // 5) DYNAMIC DESTINATION TAB
+  // 5) DESTINATION INFO & CAROUSEL
   // -----------------------------
   const DynamicDestinationContent = () => {
     if (!cityData) {
@@ -299,6 +340,13 @@ export default function BentoGridDemo() {
 
     return (
       <div className="flex flex-col items-center justify-center space-y-6">
+        {/* City Title */}
+        {cityData.city && (
+          <h2 className="text-lg font-bold text-neutral-700 dark:text-neutral-300">
+            {cityData.city}
+          </h2>
+        )}
+
         {/* Carousel */}
         <div className="relative w-full max-w-lg">
           <Carousel>
@@ -330,7 +378,7 @@ export default function BentoGridDemo() {
           </Carousel>
         </div>
 
-        {/* Information */}
+        {/* Description */}
         <div className="overflow-y-auto max-h-72 px-4 text-center">
           <div className="text-sm text-neutral-600 dark:text-neutral-400 mt-2 whitespace-pre-line">
             <ReactMarkdown
@@ -356,7 +404,7 @@ export default function BentoGridDemo() {
   };
 
   // -----------------------------
-  // 6) INFO TABS (INCL. DESTINATION)
+  // 6) INFO TABS
   // -----------------------------
   const INFO_TABS = [
     {
@@ -374,11 +422,7 @@ export default function BentoGridDemo() {
     },
     {
       title: "Info",
-      content: (
-        <div className="p-4 text-center">
-          Additional city info or random tab.
-        </div>
-      ),
+      content: <div className="p-4 text-center">Additional tab content.</div>,
     },
   ];
 
@@ -420,12 +464,24 @@ export default function BentoGridDemo() {
   );
 
   // -----------------------------
-  // 7) BUILD THE MAIN GRID
+  // 7) TYPING TEXT ABOVE THE MAP
+  // -----------------------------
+  // Condition-based instruction
+  const instructions = !startingH3Cell
+    ? "    Type your starting location first."
+    : "Now click on any colored cell on the map to pick a destination!";
+
+  console.log("DEBUG instructions:", instructions);
+
+  // -----------------------------
+  // 8) BUILD THE MAIN GRID
   // -----------------------------
   const items = [
     {
-      title: "Map",
-      description: "Explore the map. Click on a cell to load city info.",
+      title: startingH3Cell
+        ? "Now click on any colored cell on the map to pick a destination!"
+        : "Type your starting location first.",
+      description: "Explore the map. Click on a destination to see info.",
       header: (
         <div className="relative h-full w-full">
           <div className="absolute top-[60%] left-[40%] transform -translate-x-1/2 -translate-y-1/2">
@@ -440,7 +496,7 @@ export default function BentoGridDemo() {
           </div>
         </div>
       ),
-      icon: <IconClipboardCopy className="h-4 w-4 text-neutral-500" />,
+      icon: <></>,
     },
     {
       title: "",
@@ -457,7 +513,7 @@ export default function BentoGridDemo() {
   ];
 
   // -----------------------------
-  // 8) RENDER
+  // 9) RENDER
   // -----------------------------
   return (
     <div className="flex flex-col justify-between max-w-7xl px-4 mx-auto mt-8 h-[calc(100vh-50px)]">
