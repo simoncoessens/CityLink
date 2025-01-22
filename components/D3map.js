@@ -31,8 +31,8 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
     REGIONAL: true,
   };
   const limits = {
-    money: 80,
-    co2: 10,
+    money: 8000,
+    co2: 1000,
   };
 
   // ---------------------- 1. INITIALIZE MAP ONCE ON MOUNT ----------------------
@@ -110,6 +110,20 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
 
     // 5. Draw the H3 polygons from local CSV
     loadPolygons(svg, path);
+
+    // Create the tooltip element
+    const tooltip = d3.select(containerRef.current)
+      .append("div")
+      .attr("class", "tooltip")
+      .style("position", "absolute")
+      .style("background", "#333")
+      .style("color", "#fff")
+      .style("padding", "10px")
+      .style("border-radius", "5px")
+      .style("box-shadow", "0 0 10px rgba(0, 0, 0, 0.5)")
+      .style("pointer-events", "none")
+      .style("opacity", 0)
+      .style("z-index", 1000); // Ensure the tooltip is in front
   };
 
   /**
@@ -144,11 +158,20 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
       .on("mouseover", function (e, d) {
         const { h3_cell } = d;
         if (routesRef.current[h3_cell]) {
-          console.log(getExtraInformation(routesRef.current[h3_cell]));
+          const info = getExtraInformation(routesRef.current[h3_cell]);
+          d3.select(".tooltip")
+            .style("opacity", 1)
+            .html(`Cell: ${h3_cell}<br>Distance: ${info.distanceKm.TRAIN} km<br>CO2: ${info.co2EmissionsKg} kg<br>Cost: ${info.moneyEuros} €`);
         }
       })
+      .on("mousemove", function (e) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        d3.select(".tooltip")
+          .style("left", `${e.clientX - containerRect.left + 10}px`)
+          .style("top", `${e.clientY - containerRect.top - 28}px`);
+      })
       .on("mouseout", function () {
-        // Optionally revert hover style if needed
+        d3.select(".tooltip").style("opacity", 0);
       })
       .on("click", (e, d) => {
         console.log(d.h3_cell, maxHours, maxDistance);
@@ -166,6 +189,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
       h3_cell: row.h3_cell,
       departure_date: parseDate(row.departure_date),
       trip_id: row.trip_id,
+      transport_mode: row.transport_mode,
     }));
 
     // Build the dictionaries for BFS
