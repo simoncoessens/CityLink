@@ -57,16 +57,15 @@ const contentSections = [
         <p>
           <b>Which cities in France are best suited for weekend trips? </b>
           This research delves into understanding the most viable destinations
-          for weekend travel using public transport, with a focus on
-          efficiency, accessibility, and sustainability.
+          for weekend travel using public transport, with a focus on efficiency,
+          accessibility, and sustainability.
         </p>
         <p>
           Using data from popular transport providers like <b>SNCF</b> (train)
           and <b>FlixBus</b>, we aim to uncover patterns in travel times and
-          environmental impact across various cities in France. We calculate
-          the time and cost of travel to popular destinations, providing
-          students with valuable insights for planning their next weekend
-          getaway.
+          environmental impact across various cities in France. We calculate the
+          time and cost of travel to popular destinations, providing students
+          with valuable insights for planning their next weekend getaway.
         </p>
       </>
     ),
@@ -76,9 +75,7 @@ const contentSections = [
     title: "Find your ideal travel route",
     description: (
       <>
-        <p>
-          Data visualizations are at the heart of this project. We explore:
-        </p>
+        <p>Data visualizations are at the heart of this project. We explore:</p>
         <ul>
           <li>Co2 emissions while using public transport.</li>
           <li>Travel times to popular destinations.</li>
@@ -110,10 +107,8 @@ const contentSections = [
           By comparing trains and buses, we help identify greener travel options
           for students, encouraging informed decisions for more sustainable
           weekend trips. Visualizing this data fosters awareness and empowers
-          individuals to minimize their carbon footprint.
-
-          We want to show the benefits of public transport vs private cars, and
-          airplanes.
+          individuals to minimize their carbon footprint. We want to show the
+          benefits of public transport vs private cars, and airplanes.
         </p>
       </>
     ),
@@ -128,7 +123,7 @@ const contentSections = [
           Our project bridges this need by analyzing:
         </p>
         <ul>
-          <li>Top destinations reachable within 3-5 hours.</li>
+          <li>Top destinations reachable within 3-6 hours.</li>
           <li>Cost-effective routes using buses and trains.</li>
         </ul>
         <p>
