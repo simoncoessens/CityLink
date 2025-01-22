@@ -44,7 +44,8 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "ts-priority-queue": "^0.1.1",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "typewriter-effect": "^2.21.0"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.16",
