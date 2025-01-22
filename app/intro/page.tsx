@@ -123,7 +123,7 @@ const contentSections = [
           Our project bridges this need by analyzing:
         </p>
         <ul>
-          <li>Top destinations reachable within 3-6 hours.</li>
+          <li>Top destinations reachable within 2-6 hours.</li>
           <li>Cost-effective routes using buses and trains.</li>
         </ul>
         <p>
