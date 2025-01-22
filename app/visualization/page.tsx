@@ -26,6 +26,20 @@ export default function BentoGridDemo() {
   // 1) STATE FOR TIMES, HOURS, ETC.
   // -----------------------------
   const [maxHours, setMaxHours] = useState(4);
+  interface DetailInformation {
+    co2EmissionsKg: number;
+    moneyEuros: number;
+    euclideanDistanceKm: number;
+    distanceKm:{
+      TRAIN: number;
+      BUS: number;
+      REGIONAL: number;
+    }
+    timeTaken: number;
+    // Add other properties if needed
+  }
+  
+  const [detailInformation, setDetailInformation] = useState<DetailInformation | null>(null);
   const [startHour, setStartHour] = useState(9);
   const [money, setMoney] = useState(12);
   const [co2, setCo2] = useState(0);
@@ -204,6 +218,9 @@ export default function BentoGridDemo() {
     setSelectedH3Cell(h3Cell);
     console.log("Selected H3 Cell:", h3Cell);
   };
+  const handleDetailInformation = (info: any) => {
+    setDetailInformation(info);
+  }
 
   // Suggestion select (from input box suggestions)
   const handleSuggestionSelect = (suggestion: CsvRow) => {
@@ -438,7 +455,34 @@ export default function BentoGridDemo() {
       title: "Info",
       content: (
         <div className="p-4 text-center">
-          Additional city info or random tab.
+          <h3 className="text-lg font-semibold">Additional Trip Information</h3>
+          {detailInformation && (
+            <div className="text-left">
+                <p>CO2 Emissions using public Transport: {detailInformation.co2EmissionsKg.toFixed(0)} kg</p>
+                <p>Money: {detailInformation.moneyEuros.toFixed(0)} Euros</p>
+                <p>Time: {Math.floor(detailInformation.timeTaken / 60)} hours {detailInformation.timeTaken % 60} minutes</p>
+                <br/>
+                <strong>Distance traveled in different public transport methods:</strong>
+                {detailInformation.distanceKm.TRAIN > 0 && (
+                  <p>Distance traveled in HighSpeed Train: {detailInformation.distanceKm.TRAIN.toFixed(0)} km</p>
+                )}
+                {detailInformation.distanceKm.BUS > 0 && (
+                  <p>Distance traveled in Bus: {detailInformation.distanceKm.BUS.toFixed(0)} km</p>
+                )}
+                {detailInformation.distanceKm.REGIONAL > 0 && (
+                  <p>Distance traveled in Regional Transport: {detailInformation.distanceKm.REGIONAL.toFixed(0)} km</p>
+                )}
+                <br/>
+                <p>If you were to catch a flight it would be around: {(
+                  (detailInformation.distanceKm.TRAIN+detailInformation.distanceKm.REGIONAL)*0.164).toFixed(0) } kg 
+                  of CO2 emissions.
+                </p>
+
+                <p className="mt-4 text-sm text-neutral-500">
+                  Disclaimer: Prices, CO2 emissions, and time spent are approximations and may vary based on various factors.
+                </p>
+            </div>
+          )}
         </div>
       ),
     },
@@ -518,6 +562,7 @@ export default function BentoGridDemo() {
                 co2={co2}
                 onH3CellSelect={handleH3CellSelect}
                 startingH3Cell={startingH3Cell}
+                setDetailInformation={setDetailInformation}
               />
             </div>
           </div>

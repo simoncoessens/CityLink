@@ -8,7 +8,7 @@ import PropTypes from "prop-types";
 // Time parsing function
 const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSelect, startingH3Cell}) => {
+const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSelect, startingH3Cell, setDetailInformation}) => {
   const containerRef = useRef(null);
 
   // ------ State variables ------
@@ -21,6 +21,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
   const h3LtLnRef = useRef({});
   const frenchCitiesByH3Ref = useRef({});
   const routesRef = useRef({});   // Will hold BFS route info
+  const finalDistances = useRef({});
 
   // ------ Constants ------
   const MAP_WIDTH = 900;
@@ -58,7 +59,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
     if (startingH3Cell) {
       // We need to update the map coloring with the new maxHours-based BFS
       const svg = d3.select(containerRef.current).select("svg");
-      updateMap(svg, startingH3Cell);
+      finalDistances.current = updateMap(svg, startingH3Cell);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxHours, startingH3Cell, money, co2]);
@@ -239,8 +240,13 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
       .on("click", (e, d) => {
         if (onH3CellSelect) {
           onH3CellSelect(d.h3_cell); // callback to parent
+          const detailInformation = {
+            ...getExtraInformation(routesRef.current[d.h3_cell]),
+            euclideanDistanceKm: getDistanceKmH3Cells(startingH3Cell, d.h3_cell),
+            timeTaken: finalDistances.current[d.h3_cell],
+          }
+          setDetailInformation(detailInformation)
         }
-        // After user selects a cell, run BFS-based coloring
       });
 
     // Just in case you need the CSV data for further reference:
@@ -291,7 +297,6 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
 
     // BFS returns a dictionary of travel times from source
     const distances = getShortestDistanceFromH3CellSource(selectedCell, startDate);
-
     // colorScale
     const colorScale = d3.scaleSequential(d3.interpolateRdYlGn).domain([maxDistance, 0]);
 
@@ -304,13 +309,14 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
       }
       return colorScale(distance);
     });
+    return distances;
   };
 
   // ---------------------- BFS FUNCTION ----------------------
   function getShortestDistanceFromH3CellSource(h3CellSource, startDate) {
     routesRef.current = {}; // Reset route info
+    const times = {};
 
-    const visited = new Set();
     const queue = new PriorityQueue({
       comparator: (a, b) => b.time - a.time, // small -> large if you want ascending by time
     });
@@ -319,11 +325,9 @@ const D3Map = ({ maxHours = 4, startHour = 8, money = 12, co2 = 10, onH3CellSele
     const h3CellDictionary = h3CellDictionaryRef.current;
     const tripDictionary = tripDictionaryRef.current;
 
-    const times = {};
     for (const h3CellKey in h3CellDictionary) {
       times[h3CellKey] = 10000000;
     }
-
     queue.queue({
       h3Cell: h3CellSource,
       time: 0,
@@ -534,6 +538,7 @@ D3Map.propTypes = {
   maxHours: PropTypes.number,
   startHour: PropTypes.number,
   onH3CellSelect: PropTypes.func,
+  setDetailInformation: PropTypes.func,
 };
 
 export default D3Map;
