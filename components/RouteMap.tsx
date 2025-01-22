@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet-routing-machine";
 import "leaflet/dist/leaflet.css";
+
 interface RouteMapProps {
   startLocation: { lat: number; lng: number };
   destinationLocation: { lat: number; lng: number };
@@ -14,23 +15,27 @@ const RouteMap: React.FC<RouteMapProps> = ({
   destinationLocation,
 }) => {
   const mapRef = useRef<InstanceType<typeof L.Map> | null>(null);
-
   const routingControlRef = useRef<L.Routing.Control | null>(null);
 
   useEffect(() => {
-    // Ensure the map logic only runs on the client-side
     if (typeof window === "undefined") return;
 
+    let isMounted = true;
+
     (async () => {
+      if (!isMounted) return;
+
       await import("leaflet-routing-machine");
+
+      // Ensure valid locations
+      if (!startLocation || !destinationLocation) return;
 
       // Initialize the map if it doesn't exist
       if (!mapRef.current) {
         mapRef.current = L.map("route-map", {
           zoomControl: false,
-        }).setView([47.08, 2.4], 6); // Default center position
+        }).setView([47.08, 2.4], 6);
 
-        // Add tile layer
         L.tileLayer(
           "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
           {
@@ -41,47 +46,57 @@ const RouteMap: React.FC<RouteMapProps> = ({
         ).addTo(mapRef.current);
       }
 
-      // Remove the existing routing control if present
+      // Remove existing routing control
       if (routingControlRef.current) {
         mapRef.current.removeControl(routingControlRef.current);
+        routingControlRef.current = null;
       }
 
-      // Create new routing control
+      // Add new routing control
       routingControlRef.current = L.Routing.control({
         waypoints: [
           L.latLng(startLocation.lat, startLocation.lng),
           L.latLng(destinationLocation.lat, destinationLocation.lng),
         ],
-        createMarker: () => null, // Hide markers
+        createMarker: () => null,
         routeWhileDragging: false,
-        show: false, // Hide textual instructions
+        show: false,
         addWaypoints: false,
         lineOptions: {
           styles: [{ color: "#3388ff", weight: 4 }],
         },
       }).addTo(mapRef.current);
 
-      // When routes are found, remove the built-in UI & fit the map
       routingControlRef.current?.on("routesfound", (e) => {
-        // Remove the default routing container
         const container = routingControlRef.current?.getContainer();
         if (container && container.parentNode) {
           container.parentNode.removeChild(container);
         }
 
-        // Optionally, fit the map to the route
         if (!mapRef.current) return;
         const routes = e.routes;
         if (routes && routes.length > 0) {
-          const route = routes[0];
-          // route.coordinates is an array of LatLng points along the route
-          const bounds = L.latLngBounds(route.coordinates);
-          mapRef.current.fitBounds(bounds, {
-            padding: [50, 50], // Provide some optional padding
-          });
+          const bounds = L.latLngBounds(routes[0].coordinates);
+          mapRef.current.fitBounds(bounds, { padding: [50, 50] });
         }
       });
     })();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+
+      if (routingControlRef.current) {
+        routingControlRef.current.getPlan().setWaypoints([]);
+        mapRef.current?.removeControl(routingControlRef.current);
+        routingControlRef.current = null;
+      }
+
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
   }, [startLocation, destinationLocation]);
 
   return (
