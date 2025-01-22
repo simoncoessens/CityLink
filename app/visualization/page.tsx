@@ -493,9 +493,14 @@ export default function BentoGridDemo() {
         <div className="relative h-full w-full">
           <h2 className="absolute top-4 left-1/2 transform -translate-x-1/2 text-black font-bold z-10">
             <Typewriter
+              key={startingLocation} // Add key to reinitialize Typewriter on change
               onInit={(typewriter) => {
                 typewriter
-                  .typeString("Begin by typing your starting location")
+                  .typeString(
+                    startingLocation
+                      ? "Now you can select a destination to go to"
+                      : "Begin by typing your starting location"
+                  )
                   .pauseFor(1000000) // Pauses indefinitely after typing
                   .start();
               }}
