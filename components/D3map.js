@@ -21,6 +21,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell, se
   const h3LtLnRef = useRef({});
   const frenchCitiesByH3Ref = useRef({});
   const routesRef = useRef({});   // Will hold BFS route info
+  const finalDistances = useRef({});
 
   // ------ Constants ------
   const MAP_WIDTH = 900;
@@ -34,8 +35,6 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell, se
     money: 8000,
     co2: 1000,
   };
-  let times = {};
-  let distances = {};
 
   // ---------------------- 1. INITIALIZE MAP ONCE ON MOUNT ----------------------
   useEffect(() => {
@@ -60,7 +59,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell, se
     if (startingH3Cell) {
       // We need to update the map coloring with the new maxHours-based BFS
       const svg = d3.select(containerRef.current).select("svg");
-      distances = updateMap(svg, startingH3Cell);
+      finalDistances.current = updateMap(svg, startingH3Cell);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxHours, startingH3Cell]);
@@ -239,12 +238,10 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell, se
       .on("click", (e, d) => {
         if (onH3CellSelect) {
           onH3CellSelect(d.h3_cell); // callback to parent
-          console.log(distances[d.h3_cell]);
-          console.log(distances);
           const detailInformation = {
             ...getExtraInformation(routesRef.current[d.h3_cell]),
-            euclideanDistanceKm: getDistanceKmH3Cells(userSelectedCell, d.h3_cell),
-            timeTaken: distances[d.h3_cell],
+            euclideanDistanceKm: getDistanceKmH3Cells(startingH3Cell, d.h3_cell),
+            timeTaken: finalDistances.current[d.h3_cell],
           }
           setDetailInformation(detailInformation)
         }
@@ -297,7 +294,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell, se
     const startDate = parseDate(`2024-11-03 ${startHour}:00:00`);
 
     // BFS returns a dictionary of travel times from source
-    distances = getShortestDistanceFromH3CellSource(selectedCell, startDate);
+    const distances = getShortestDistanceFromH3CellSource(selectedCell, startDate);
     // colorScale
     const colorScale = d3.scaleSequential(d3.interpolateRdYlGn).domain([maxDistance, 0]);
 
@@ -316,7 +313,7 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell, se
   // ---------------------- BFS FUNCTION ----------------------
   function getShortestDistanceFromH3CellSource(h3CellSource, startDate) {
     routesRef.current = {}; // Reset route info
-    times = {};
+    const times = {};
 
     const queue = new PriorityQueue({
       comparator: (a, b) => b.time - a.time, // small -> large if you want ascending by time
@@ -539,6 +536,7 @@ D3Map.propTypes = {
   maxHours: PropTypes.number,
   startHour: PropTypes.number,
   onH3CellSelect: PropTypes.func,
+  setDetailInformation: PropTypes.func,
 };
 
 export default D3Map;

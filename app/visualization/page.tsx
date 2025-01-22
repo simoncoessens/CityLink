@@ -457,7 +457,8 @@ export default function BentoGridDemo() {
                   <p>Distance traveled in Regional Transport: {detailInformation.distanceKm.REGIONAL.toFixed(0)} km</p>
                 )}
                 <br/>
-                <p>If you were to catch a flight it would be around: {(detailInformation.euclideanDistanceKm*0.164).toFixed(0) } kg 
+                <p>If you were to catch a flight it would be around: {(
+                  (detailInformation.distanceKm.TRAIN+detailInformation.distanceKm.REGIONAL)*0.164).toFixed(0) } kg 
                   of CO2 emissions.
                 </p>
 
