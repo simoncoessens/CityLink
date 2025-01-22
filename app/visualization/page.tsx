@@ -507,8 +507,8 @@ export default function BentoGridDemo() {
   // 8) RENDER
   // -----------------------------
   return (
-    <div className="flex flex-col justify-between max-w-7xl px-4 mx-auto mt-8 h-[calc(100vh-50px)]">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
+    <div className="max-w-[1600px] mx-auto px-4 mt-8 h-[calc(100vh-50px)]">
+      <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-6 flex-grow h-full">
         <div className="flex flex-col h-full">
           <BentoGridItem
             title={items[0].title}
