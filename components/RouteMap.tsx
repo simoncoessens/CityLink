@@ -22,7 +22,6 @@ const RouteMap: React.FC<RouteMapProps> = ({
     if (typeof window === "undefined") return;
 
     (async () => {
-      const L = (await import("leaflet")).default;
       await import("leaflet-routing-machine");
 
       // Initialize the map if it doesn't exist

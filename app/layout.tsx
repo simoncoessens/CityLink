@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "CityLink",
   description: "Visual Analytics for Urban Mobility",
+  icons: {
+    icon: "/images/map.jpg",
+  },
 };
 
 export default function RootLayout({

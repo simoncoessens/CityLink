@@ -2,7 +2,6 @@
 import dynamic from "next/dynamic";
 import React, { useState, useEffect, useRef } from "react";
 import Papa from "papaparse";
-import { cellToLatLng } from "h3-js"; // <-- ADD THIS
 import {
   IconClipboardCopy,
   IconFileBroken,
@@ -63,6 +62,39 @@ export default function BentoGridDemo() {
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [cityData, setCityData] = useState<CsvRow | null>(null);
 
+  // <-- ADDED: We'll keep a separate lookup for h3 -> lat/lng from h3_info.csv
+  interface H3InfoRow {
+    h3: string;
+    x: string;
+    y: string;
+  }
+  const [h3LookupData, setH3LookupData] = useState<{
+    [h3: string]: { lat: number; lng: number };
+  }>({});
+
+  useEffect(() => {
+    Papa.parse("data/h3_info.csv", {
+      download: true,
+      header: true,
+      complete: (results) => {
+        const data = results.data as H3InfoRow[];
+        const lookup: {
+          [h3: string]: { lat: number; lng: number };
+        } = {};
+        data.forEach((row) => {
+          lookup[row.h3] = {
+            lat: parseFloat(row.x),
+            lng: parseFloat(row.y),
+          };
+        });
+        setH3LookupData(lookup);
+      },
+      error: (err) => {
+        console.error("Error parsing h3_info.csv:", err);
+      },
+    });
+  }, []);
+
   useEffect(() => {
     // Load CSV data once
     Papa.parse("/enriched_cities_dev.csv", {
@@ -109,16 +141,23 @@ export default function BentoGridDemo() {
   //  2) If no match, find the closest row in CSV by lat/lon using h3ToGeo + distance calc
   useEffect(() => {
     if (selectedH3Cell && csvData.length > 0) {
+      // 1) Try direct match in city CSV
       let row = csvData.find((item) => item.h3_cell === selectedH3Cell);
 
       if (!row) {
-        // If we didn't find a direct match, find the closest row by lat/lon
-        const [cellLat, cellLng] = cellToLatLng(selectedH3Cell);
-
-        // For “closest” matching, use Haversine or a simpler formula
-        function toRad(value: number) {
-          return (value * Math.PI) / 180;
+        // 2) If no direct match in city CSV, try fallback with h3_info.csv
+        const h3Entry = h3LookupData[selectedH3Cell];
+        if (!h3Entry) {
+          // If it's also not in h3_info.csv, we give up
+          setCityData(null);
+          return;
         }
+
+        // We have lat/lng from h3_info.csv for this H3
+        const cellLat = h3Entry.lat;
+        const cellLng = h3Entry.lng;
+
+        // For “closest” matching, we can do a simple Euclidean distance
         function euclideanDistance(
           lat1: number,
           lon1: number,
@@ -138,7 +177,6 @@ export default function BentoGridDemo() {
           if (dist < minDist) {
             minDist = dist;
             closestRow = r;
-            console.log("Closest row:", dist);
           }
         }
         row = closestRow || undefined;
@@ -148,7 +186,7 @@ export default function BentoGridDemo() {
     } else {
       setCityData(null);
     }
-  }, [selectedH3Cell, csvData]);
+  }, [selectedH3Cell, csvData, h3LookupData]);
 
   // Handler that D3Map calls when user clicks on an H3 cell
   const handleH3CellSelect = (h3Cell: string) => {
@@ -424,7 +462,8 @@ export default function BentoGridDemo() {
   const items = [
     {
       title: "Map",
-      description: "Explore the map. Click on a cell to load city info.",
+      description:
+        "Explore the map. Click on a destination to see its information.",
       header: (
         <div className="relative h-full w-full">
           <div className="absolute top-[60%] left-[40%] transform -translate-x-1/2 -translate-y-1/2">
