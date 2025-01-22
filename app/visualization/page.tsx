@@ -65,8 +65,8 @@ export default function BentoGridDemo() {
   // <-- ADDED: We'll keep a separate lookup for h3 -> lat/lng from h3_info.csv
   interface H3InfoRow {
     h3: string;
-    x: string;
-    y: string;
+    lat: string;
+    lng: string;
   }
   const [h3LookupData, setH3LookupData] = useState<{
     [h3: string]: { lat: number; lng: number };
@@ -83,8 +83,8 @@ export default function BentoGridDemo() {
         } = {};
         data.forEach((row) => {
           lookup[row.h3] = {
-            lat: parseFloat(row.x),
-            lng: parseFloat(row.y),
+            lat: parseFloat(row.lat),
+            lng: parseFloat(row.lng),
           };
         });
         setH3LookupData(lookup);
@@ -150,6 +150,7 @@ export default function BentoGridDemo() {
         if (!h3Entry) {
           // If it's also not in h3_info.csv, we give up
           setCityData(null);
+          console.log("not in csv");
           return;
         }
 
@@ -180,6 +181,7 @@ export default function BentoGridDemo() {
           }
         }
         row = closestRow || undefined;
+        console.log(row);
       }
 
       setCityData(row || null);
@@ -337,6 +339,12 @@ export default function BentoGridDemo() {
 
     return (
       <div className="flex flex-col items-center justify-center space-y-6">
+        {/* City Title */}
+        {cityData.city && (
+          <h2 className="text-lg font-bold text-neutral-700 dark:text-neutral-300">
+            {cityData.city}
+          </h2>
+        )}
         {/* Carousel */}
         <div className="relative w-full max-w-lg">
           <Carousel>
