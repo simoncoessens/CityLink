@@ -8,7 +8,7 @@ import PropTypes from "prop-types";
 // Time parsing function
 const parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
+const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect, startingH3Cell}) => {
   const containerRef = useRef(null);
 
   // ------ State variables ------
@@ -55,13 +55,13 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
     // Update maxDistance in our state
     setMaxDistance(maxHours * 60);
     // If we already have a user-selected H3 cell, re-run the BFS logic to recolor
-    if (userSelectedCell) {
+    if (startingH3Cell) {
       // We need to update the map coloring with the new maxHours-based BFS
       const svg = d3.select(containerRef.current).select("svg");
-      updateMap(svg, userSelectedCell);
+      updateMap(svg, startingH3Cell);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [maxHours]);
+  }, [maxHours, startingH3Cell]);
 
   /**
    * Called only once when the component mounts. This function:
@@ -158,10 +158,14 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
       .on("mouseover", function (e, d) {
         const { h3_cell } = d;
         if (routesRef.current[h3_cell]) {
+          const cities = frenchCitiesByH3Ref.current[d.h3_cell] || [];
+          const tooltipContent = cities.slice(0, 2).map(cityObj => cityObj.city).join(", ");
           const info = getExtraInformation(routesRef.current[h3_cell]);
-          d3.select(".tooltip")
-            .style("opacity", 1)
-            .html(`Cell: ${h3_cell}<br>Distance: ${info.distanceKm.TRAIN} km<br>CO2: ${info.co2EmissionsKg} kg<br>Cost: ${info.moneyEuros} €`);
+          if (cities.length > 0) {
+            d3.select(".tooltip")
+              .style("opacity", 1)
+              .html(tooltipContent)
+          }
         }
       })
       .on("mousemove", function (e) {
@@ -174,13 +178,10 @@ const D3Map = ({ maxHours = 4, startHour = 8, onH3CellSelect }) => {
         d3.select(".tooltip").style("opacity", 0);
       })
       .on("click", (e, d) => {
-        console.log(d.h3_cell, maxHours, maxDistance);
-        setUserSelectedCell(d.h3_cell);
         if (onH3CellSelect) {
           onH3CellSelect(d.h3_cell); // callback to parent
         }
         // After user selects a cell, run BFS-based coloring
-        updateMap(svg, d.h3_cell);
       });
 
     // Just in case you need the CSV data for further reference:
