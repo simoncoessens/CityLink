@@ -1,5 +1,8 @@
 Workflow demo: 
 
+
+-- Gabriel 
+
 1. Type Lille as starting
 	- explain what the map shows
 2. Click on Paris as destination
@@ -13,16 +16,19 @@ Workflow demo:
 5. Do the budget slider and co2 slider
 
 
+
+-- Simon -- 
+
 6. Change starting location to 'Lyon'
 
 7. Explain route + info
 	-> here also explain the impact of startingHour
 
-Extra: 
+Qasim example: 
 8. Click Strasbourg as starting location
 9. Click Colmar as destination
 
-[explain the pitch user example]
+
 
 
 
