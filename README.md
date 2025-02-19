@@ -6,7 +6,7 @@
 
 ## Overview
 
-CityLinkProject is a **data visualization project** developed as part of the **Visual Analytics course at CentraleSupélec**. It focuses on analyzing and visualizing weekend travel in France using public transport, with an emphasis on efficiency, accessibility, and sustainability.
+CityLink is a **data visualization project** developed as part of the **Visual Analytics course at CentraleSupélec**. It focuses on analyzing and visualizing weekend travel in France using public transport, with an emphasis on efficiency, accessibility, and sustainability.
 
 Using real-world data from **SNCF (train), FlixBus**, and other transport providers, the project explores:
 
@@ -22,10 +22,11 @@ Using real-world data from **SNCF (train), FlixBus**, and other transport provid
 
 <p align="center">
     <video width="600" controls>
-        <source src="[public/demo.mp4](https://github.com/simoncoessens/CityLink/blob/main/public/demo.mp4)" type="video/mp4">
+        <source src="https://raw.githubusercontent.com/simoncoessens/CityLink/main/public/demo.mp4" type="video/mp4">
         Your browser does not support the video tag.
     </video>
 </p>
+
 
 ## Features
 
