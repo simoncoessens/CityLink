@@ -1,117 +1,61 @@
 # CityLink
 
-## Project Structure
+<p align="center">
+<img src="public/Logo_CentraleSupélec.svg.png" alt="CentraleSupélec Logo" width="100">
+</p>
 
-The project is organized as follows:
+## Overview
 
-- **app/**: Contains Next.js application routes.
-  - `intro/page.tsx`: Code for the introduction page.
-  - `visualization/page.tsx`: Code for the visualization page.
-- **components/**: Reusable React components.
-  - `animata/`: Components related to animations.
-  - `core/`: Core functionality components.
-  - `ui/`: UI elements and utility components.
-  - `D3map.js`: Visualization using D3.js.
-  - `LoadingDots.tsx`: Component for showing loading indicators.
-  - `RouteMap.tsx`: Component for managing route visualizations.
-- **lib/**: Shared libraries or utilities for the application.
-- **public/**: Publicly accessible assets and data files.
-  - `city_images/`: Folder containing city images.
-  - `data/`: Data files in CSV format and data processing scripts.
-    - `h3_info.csv`: Data about H3 grid cells.
-    - `polygons.csv`: Data for polygons.
-    - `FrenchCities_with_h3.csv`: Data for French cities with H3 references.
-    - `fetch_data.py`: Script for fetching or processing data.
-- **types/**: TypeScript type definitions.
-- **utils/**: Utility functions for the project.
+CityLinkProject is a **data visualization project** developed as part of the **Visual Analytics course at CentraleSupélec**. It focuses on analyzing and visualizing weekend travel in France using public transport, with an emphasis on efficiency, accessibility, and sustainability.
 
-## Prerequisites
+Using real-world data from **SNCF (train), FlixBus**, and other transport providers, the project explores:
 
-Before running the application, ensure you have the following installed:
+- Travel times to major weekend destinations
+- Cost-effective routes for students
+- CO2 emissions for different modes of transport
+- Accessibility and sustainability insights
 
-- **Node.js**: Version 16 or higher.
-- **npm** or **yarn**: For dependency management.
-- **Python**: For running data preprocessing scripts (optional, if needed).
+<br>
+<br>
 
-## Getting Started
+## Demo
 
-Follow these steps to set up and run the project:
+<p align="center">
+    <video width="600" controls>
+        <source src="public/demo.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+</p>
 
-### 1. Clone the Repository
+## Features
 
-Clone the repository to your local machine:
+### Travel Route Visualization
 
-```bash
-git clone <repository_url>
-cd <repository_folder>
-```
+Interactive maps and data visualizations provide:
 
-### 2. Install Dependencies
+- Destinations reachable within **2-6 hours**
+- **Optimal travel routes** using trains and buses
+- **Budget-friendly travel options** for students
 
-Install the required dependencies using npm or yarn:
+### Environmental Impact Analysis
 
-```bash
-npm install
-```
+The project integrates a **CO2 emissions analysis**, comparing different travel modes:
 
-or, if you use Yarn:
+- Emissions from **buses vs. trains vs. private transport**
+- Public transport’s role in **sustainable travel**
+- Data-driven insights on reducing carbon footprint
 
-```bash
-yarn install
-```
+### Student Travel Insights
 
-Ensure Python is installed on your machine.
+Students often seek quick, affordable trips. This project helps by:
 
-### 3. Run the Development Server
+- Identifying **cost-effective routes**
+- Analyzing **travel time constraints**
+- Providing insights into **sustainable travel options**
 
-Start the development server to view the application locally:
+## How to Use
 
-```bash
-npm run dev
-```
-
-or, using Yarn:
-
-```bash
-yarn dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser to access the app.
-
-### 4. Build for Production
-
-To create a production-ready build of the application, run:
-
-```bash
-npm run build
-```
-
-After building, you can start the production server using:
-
-```bash
-npm start
-```
-
-## Key Scripts
-
-Here are some commonly used scripts:
-
-- `npm run dev`: Starts the development server.
-- `npm run build`: Builds the application for production.
-- `npm start`: Starts the production server.
-
-## Folder Details
-
-### Data Folder (`public/data/`)
-
-- **Data Files**:
-  - `h3_info.csv`, `polygons.csv`, `FrenchCities_with_h3.csv`: Provide essential data for visualizations.
-- **Script**:
-  - `fetch_data.py`: A Python script to process or fetch new data.
-
-### Components Folder (`components/`)
-
-Reusable components used throughout the project:
-
-- `D3map.js`: Handles visualization with D3.js.
-- `RouteMap.tsx`: Component for rendering route-based maps.
+1. **Enter your starting location**
+2. **Explore the interactive map** for travel times and CO2 impact
+3. **Select a city** to view travel cost, time, and sustainability data
+4. **Plan your trip** based on preferred criteria
