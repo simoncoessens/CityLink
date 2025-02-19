@@ -21,10 +21,7 @@ Using real-world data from **SNCF (train), FlixBus**, and other transport provid
 ## Demo
 
 <p align="center">
-    <video width="600" controls>
-        <source src="https://raw.githubusercontent.com/simoncoessens/CityLink/main/public/demo.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
+<img src="public/screen.png" alt="App" width="500">
 </p>
 
 
