@@ -22,7 +22,7 @@ Using real-world data from **SNCF (train), FlixBus**, and other transport provid
 
 <p align="center">
     <video width="600" controls>
-        <source src="public/demo.mp4" type="video/mp4">
+        <source src="[public/demo.mp4](https://github.com/simoncoessens/CityLink/blob/main/public/demo.mp4)" type="video/mp4">
         Your browser does not support the video tag.
     </video>
 </p>
